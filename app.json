@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "ACEout",
+    "slug": "aceout-virtual-labs",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FBF7F0",
+    "primaryColor": "#96662F",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aceout.virtuallabs"
+    },
+    "android": {
+      "package": "com.aceout.virtuallabs",
+      "adaptiveIcon": {
+        "backgroundColor": "#F1EADE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FBF7F0",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e5b945f5-8cd0-4e54-9883-3719100c487e"
+      }
+    },
+    "scheme": "aceout"
+  }
+}
