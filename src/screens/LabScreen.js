@@ -3,10 +3,16 @@ import { View, Text, StyleSheet } from 'react-native';
 import { color, font } from '../theme';
 import { Page, BackButton, Rule } from '../components/ui';
 import InclineLab from '../labs/incline/InclineLab';
+import FeScnLab from '../labs/fe_scn/FeScnLab';
+import IndicatorsLab from '../labs/indicators/IndicatorsLab';
+import PhDeterminationLab from '../labs/ph_determination/PhDeterminationLab';
 import { useAppState } from '../store/AppState';
 
 const REGISTRY = {
   'incline-work-energy': InclineLab,
+  'fe-scn-equilibrium': FeScnLab,
+  'acid-base-indicators': IndicatorsLab,
+  'ph-determination': PhDeterminationLab,
 };
 
 export default function LabScreen({ navigation, route }) {
