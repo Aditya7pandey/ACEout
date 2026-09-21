@@ -91,19 +91,10 @@ export const CHAPTERS = {
     'Thermodynamics',
     {
       title: 'Equilibrium',
-      labs: 3,
+      labs: 2,
       blurb:
-        'Shift chemical equilibrium with Le Chatelier’s principle, study acid–base indicator transitions, and measure pH with test strips and digital probes.',
+        'Study acid–base indicator transitions and measure pH of solutions with universal indicator strips and digital probes.',
       virtualLabs: [
-        {
-          id: 'fe-scn-equilibrium',
-          title: 'Effect of Concentration on Chemical Equilibrium',
-          description:
-            'Shift the Fe³⁺ + SCN⁻ ⇌ [Fe(SCN)]²⁺ equilibrium by perturbing reagent concentrations and measure color intensity.',
-          duration: '15 mins',
-          difficulty: 'Intermediate',
-          ncertCode: 'EXP-11-CH-6.1',
-        },
         {
           id: 'acid-base-indicators',
           title: 'Study of Acid-Base Indicators',
@@ -224,19 +215,6 @@ export const LABS = {
   ],
   '11|chemistry|VI': [
     {
-      id: 'fe-scn-equilibrium',
-      title: 'Effect of Concentration on Chemical Equilibrium',
-      mins: 15,
-      desc:
-        'Shift the Fe³⁺ + SCN⁻ ⇌ [Fe(SCN)]²⁺ equilibrium by altering reagent concentrations and measure color optical intensity.',
-      tag1: 'Le Chatelier’s Principle',
-      tag2: 'Colorimetry + Kc',
-      art: ART.sand,
-      built: true,
-      difficulty: 'Intermediate',
-      ncertCode: 'EXP-11-CH-6.1',
-    },
-    {
       id: 'acid-base-indicators',
       title: 'Study of Acid-Base Indicators',
       mins: 12,
@@ -343,18 +321,6 @@ export const SEARCH_INDEX = [
     chapterNo: 'I',
     art: ART.sea,
     keywords: 'refraction snell glass slab lateral displacement light',
-  },
-  {
-    id: 'fe-scn-equilibrium',
-    title: 'Effect of Concentration on Chemical Equilibrium',
-    crumb: 'Class 11 · Chemistry · VI',
-    cls: '11',
-    subject: 'chemistry',
-    chapterNo: 'VI',
-    art: ART.sand,
-    built: true,
-    keywords:
-      'equilibrium le chatelier fe scn iron thiocyanate blood red concentration shift kc colorimeter test tube',
   },
   {
     id: 'acid-base-indicators',

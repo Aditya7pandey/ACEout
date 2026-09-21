@@ -1,230 +1,281 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import Svg, { Rect, Circle, Line, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { color, font, radius } from '../../theme';
-import { Eyebrow } from '../../components/ui';
-import { getIndicatorColor, INDICATORS } from './chemistry';
+import { INDICATORS, getIndicatorColor } from './chemistry';
+import ChemistryStage from '../chemistry3d/ChemistryStage';
+import { Beaker3D, DropperPipette3D } from '../chemistry3d/Glassware3D';
+import Fluid3D from '../chemistry3d/Fluid3D';
+import { PouringStream3D } from '../chemistry3d/ParticleSystems3D';
+import TelemetryHUD3D from '../chemistry3d/TelemetryHUD3D';
 
+/**
+ * Real-time Interactive 3D Bench for Acid-Base Indicators Lab.
+ * Features 3D beakers array, 3D animated dropper pipette, dynamic fluid mixing,
+ * and real-time color transitions.
+ */
 export default function IndicatorsCanvas({
-  solutions = [], // array of { id, name, ph, drops, indicatorKey }
+  solutions = [],
   selectedIdx = 0,
   onSelectSolution,
   activeIndicator = 'phenolphthalein',
   onAddDrop,
-  height = 230,
+  height = 245,
 }) {
   const currentInd = INDICATORS[activeIndicator] || INDICATORS.phenolphthalein;
+  const safeSolutions = solutions && solutions.length > 0 ? solutions : [
+    { id: 'custom', name: 'Solution (pH 7.0)', ph: 7.0, drops: 0, indicatorKey: activeIndicator },
+  ];
+
+  const activeSol = safeSolutions[selectedIdx] || safeSolutions[0];
+  
+  // Dropper animation state
+  const [isDropping, setIsDropping] = useState(false);
+
+  const handleAddDrop = () => {
+    if (onAddDrop) {
+      setIsDropping(true);
+      onAddDrop();
+      setTimeout(() => setIsDropping(false), 550);
+    }
+  };
+
+  // Compute 3D positions for the solutions
+  const numSols = safeSolutions.length;
+  const spacing = 0.72;
+  const startX = -((numSols - 1) * spacing) / 2;
+
+  const hudOverlay = (
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      {/* Top Floating Telemetry Info */}
+      <TelemetryHUD3D
+        title={activeSol.name || 'Test Solution'}
+        category={`Indicator: ${currentInd.name}`}
+        ph={activeSol.ph}
+        volumeMl={50 + (activeSol.drops || 0) * 0.5}
+        temperatureC={25.0}
+        customMetrics={
+          <>
+            <View style={styles.metricGroup}>
+              <Text style={styles.metricLabel}>Active Indicator</Text>
+              <Text style={[styles.metricVal, { color: color.brass }]}>
+                {currentInd.short} · {currentInd.transitionDesc}
+              </Text>
+            </View>
+            <View style={[styles.metricGroup, { alignItems: 'flex-end' }]}>
+              <Text style={styles.metricLabel}>Dosage</Text>
+              <Text style={[styles.metricVal, { color: color.chemistry }]}>
+                {activeSol.drops || 0} drops
+              </Text>
+            </View>
+          </>
+        }
+      />
+
+      {/* Solutions Selection Pills & Pipette Trigger Bar */}
+      <View style={styles.bottomControls} pointerEvents="box-none">
+        {safeSolutions.length > 1 && (
+          <View style={styles.selectorRow} pointerEvents="box-none">
+            {safeSolutions.map((sol, idx) => {
+              const isSelected = selectedIdx === idx;
+              const fluidClr = getIndicatorColor(sol.indicatorKey || activeIndicator, sol.ph, sol.drops || 0);
+              return (
+                <Pressable
+                  key={sol.id || idx}
+                  onPress={() => onSelectSolution && onSelectSolution(idx)}
+                  style={({ pressed }) => [
+                    styles.solPill,
+                    isSelected && styles.solPillActive,
+                    pressed && { opacity: 0.75 },
+                  ]}
+                >
+                  <View style={[styles.fluidColorDot, { backgroundColor: fluidClr }]} />
+                  <Text style={[styles.solPillText, isSelected && { color: color.brass }]}>
+                    {sol.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
+        {onAddDrop ? (
+          <Pressable
+            onPress={handleAddDrop}
+            style={({ pressed }) => [
+              styles.dropperAction,
+              isDropping && styles.dropperActionActive,
+              pressed && { opacity: 0.75 },
+            ]}
+          >
+            <Text style={styles.dropperIcon}>💧</Text>
+            <Text style={styles.dropperActionText}>
+              Add 1 Drop of {currentInd.name}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </View>
+  );
 
   return (
-    <View style={[styles.wrap, { height }]}>
-      {/* Top Indicator info & Transition bar */}
-      <View style={styles.topInfo}>
-        <View style={styles.indicatorBadge}>
-          <Text style={styles.indicatorName}>{currentInd.name}</Text>
-          <Text style={styles.indicatorRange}>{currentInd.transitionDesc}</Text>
-        </View>
-      </View>
+    <ChemistryStage
+      height={height}
+      initialOrbit={{ az: 0, el: 0.38, dist: 2.55 }}
+      target={[0, 0.35, 0]}
+      overlay={hudOverlay}
+    >
+      {/* Array of 3D Glass Beakers with dynamic fluid colors */}
+      {safeSolutions.map((sol, idx) => {
+        const posX = startX + idx * spacing;
+        const isSelected = selectedIdx === idx;
+        const fluidColor = getIndicatorColor(
+          sol.indicatorKey || activeIndicator,
+          sol.ph,
+          sol.drops || 0
+        );
 
-      {/* Beakers Row */}
-      <View style={styles.beakersRow}>
-        {solutions.map((sol, idx) => {
-          const isSelected = selectedIdx === idx;
-          const fluidColor = getIndicatorColor(sol.indicatorKey || activeIndicator, sol.ph, sol.drops || 0);
+        return (
+          <group key={sol.id || idx} position={[posX, 0, 0]}>
+            {/* Selection Highlight Base Ring */}
+            {isSelected && (
+              <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
+                <ringGeometry args={[0.34, 0.39, 32]} />
+                <meshBasicMaterial
+                  color="#D4A458"
+                  transparent
+                  opacity={0.7}
+                />
+              </mesh>
+            )}
 
-          return (
-            <Pressable
-              key={sol.id || idx}
-              onPress={() => onSelectSolution && onSelectSolution(idx)}
-              style={[styles.beakerWrap, isSelected && styles.beakerWrapSelected]}
-            >
-              {/* Beaker Container */}
-              <View style={styles.beakerGlass}>
-                <View style={styles.beakerLip} />
-                <View style={styles.glassBody}>
-                  {/* Graduation marks */}
-                  <View style={styles.gradLine1} />
-                  <View style={styles.gradLine2} />
-                  <View style={styles.gradLine3} />
+            {/* 3D Glass Beaker */}
+            <Beaker3D radius={0.32} height={0.75} position={[0, 0, 0]}>
+              <Fluid3D
+                color={fluidColor}
+                height={0.46}
+                radiusTop={0.31}
+                radiusBottom={0.3}
+                position={[0, 0, 0]}
+                opacity={sol.drops > 0 ? 0.88 : 0.65}
+              />
+            </Beaker3D>
 
-                  {/* Liquid fill */}
-                  <View style={[styles.liquid, { backgroundColor: fluidColor }]}>
-                    <View style={styles.meniscus} />
-                  </View>
-                </View>
-              </View>
-
-              <Text style={[styles.solTitle, isSelected && { color: color.brass, fontFamily: font.bold }]}>
-                {sol.name}
-              </Text>
-              <Text style={styles.solDrops}>
-                {sol.drops ? `${sol.drops} drops` : 'No indicator'}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {/* Pipette Dropper Trigger */}
-      {onAddDrop ? (
-        <Pressable
-          onPress={onAddDrop}
-          style={({ pressed }) => [styles.dropperAction, pressed && { opacity: 0.8 }]}
-        >
-          <Text style={styles.dropperIcon}>💧</Text>
-          <Text style={styles.dropperActionText}>
-            Add 1 Drop of {currentInd.name} to Selected Beaker
-          </Text>
-        </Pressable>
-      ) : null}
-    </View>
+            {/* Floating Dropper Pipette directly above the selected beaker */}
+            {isSelected && (
+              <>
+                <DropperPipette3D
+                  position={[0, isDropping ? 0.95 : 1.15, 0]}
+                  bulbColor={currentInd.baseColor}
+                />
+                <PouringStream3D
+                  active={isDropping}
+                  startPos={[0, 0.95, 0]}
+                  endPos={[0, 0.46, 0]}
+                  color={currentInd.baseColor}
+                  count={16}
+                  flowSpeed={3.0}
+                />
+              </>
+            )}
+          </group>
+        );
+      })}
+    </ChemistryStage>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    backgroundColor: '#F7F3EB',
-    borderRadius: radius.card,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: color.hairline,
-    padding: 12,
-    justifyContent: 'space-between',
-    overflow: 'hidden',
+  bottomControls: {
+    position: 'absolute',
+    bottom: 34,
+    left: 8,
+    right: 48,
+    gap: 5,
+    zIndex: 15,
   },
-  topInfo: {
-    alignItems: 'center',
+  selectorRow: {
+    flexDirection: 'row',
+    gap: 5,
+    flexWrap: 'wrap',
   },
-  indicatorBadge: {
+  solPill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(28,24,21,0.05)',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    gap: 5,
+    backgroundColor: 'rgba(255, 253, 248, 0.92)',
+    paddingVertical: 3.5,
+    paddingHorizontal: 7,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: color.hairline,
-    gap: 1,
+    borderColor: 'rgba(28, 24, 21, 0.12)',
   },
-  indicatorName: {
+  solPillActive: {
+    backgroundColor: 'rgba(255, 253, 248, 0.98)',
+    borderColor: color.brass,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  fluidColorDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.15)',
+  },
+  solPillText: {
     fontFamily: font.bold,
-    fontSize: 11,
-    color: color.inkStrong,
-    letterSpacing: 0.5,
-  },
-  indicatorRange: {
-    fontFamily: font.medium,
-    fontSize: 9,
-    color: color.inkMuted,
-  },
-  beakersRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'flex-end',
-    paddingVertical: 4,
-    gap: 6,
-  },
-  beakerWrap: {
-    alignItems: 'center',
-    padding: 6,
-    borderRadius: 10,
-  },
-  beakerWrapSelected: {
-    backgroundColor: 'rgba(150,102,47,0.08)',
-  },
-  beakerGlass: {
-    alignItems: 'center',
-  },
-  beakerLip: {
-    width: 48,
-    height: 3,
-    backgroundColor: 'rgba(160,190,210,0.8)',
-    borderRadius: 2,
-    borderWidth: 0.8,
-    borderColor: 'rgba(120,160,180,0.9)',
-  },
-  glassBody: {
-    width: 44,
-    height: 70,
-    backgroundColor: 'rgba(240,248,255,0.4)',
-    borderWidth: 1.5,
-    borderTopWidth: 0,
-    borderColor: 'rgba(120,160,180,0.7)',
-    borderBottomLeftRadius: 6,
-    borderBottomRightRadius: 6,
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  gradLine1: {
-    position: 'absolute',
-    top: 15,
-    right: 3,
-    width: 8,
-    height: 1,
-    backgroundColor: 'rgba(120,160,180,0.5)',
-  },
-  gradLine2: {
-    position: 'absolute',
-    top: 30,
-    right: 3,
-    width: 12,
-    height: 1,
-    backgroundColor: 'rgba(120,160,180,0.5)',
-  },
-  gradLine3: {
-    position: 'absolute',
-    top: 45,
-    right: 3,
-    width: 8,
-    height: 1,
-    backgroundColor: 'rgba(120,160,180,0.5)',
-  },
-  liquid: {
-    width: '100%',
-    height: '65%',
-    borderBottomLeftRadius: 5,
-    borderBottomRightRadius: 5,
-    position: 'relative',
-  },
-  meniscus: {
-    position: 'absolute',
-    top: 0,
-    left: 1,
-    right: 1,
-    height: 3,
-    backgroundColor: 'rgba(255,255,255,0.45)',
-    borderRadius: 2,
-  },
-  solTitle: {
-    fontFamily: font.semibold,
-    fontSize: 10.5,
-    color: color.inkBody,
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  solDrops: {
-    fontFamily: font.medium,
     fontSize: 8.5,
-    color: color.inkMuted,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: color.inkSoft,
   },
   dropperAction: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: color.paper,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: color.hairline,
+    backgroundColor: 'rgba(255, 253, 248, 0.96)',
+    borderWidth: 1,
+    borderColor: 'rgba(28, 24, 21, 0.14)',
     borderRadius: radius.pill,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    gap: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    gap: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  dropperActionActive: {
+    backgroundColor: 'rgba(255, 245, 230, 0.98)',
+    borderColor: color.brass,
   },
   dropperIcon: {
-    fontSize: 13,
+    fontSize: 11,
   },
   dropperActionText: {
     fontFamily: font.bold,
-    fontSize: 10,
-    letterSpacing: 0.8,
+    fontSize: 9,
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
-    color: color.inkSoft,
+    color: color.inkStrong,
+  },
+  metricGroup: {
+    gap: 1,
+  },
+  metricLabel: {
+    fontFamily: font.bold,
+    fontSize: 7.5,
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+    color: color.inkMuted,
+  },
+  metricVal: {
+    fontFamily: font.bold,
+    fontSize: 10,
+    fontVariant: ['tabular-nums'],
   },
 });
