@@ -1,11 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import Svg, { Rect, Circle, Line, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { color, font, radius } from '../../theme';
-import { Eyebrow } from '../../components/ui';
 import { getUniversalColor } from '../../instruments/PHColorScale';
 import { getHydroniumConc, getHydroxideConc, formatScientific } from './chemistry';
+import ChemistryStage from '../chemistry3d/ChemistryStage';
+import { Beaker3D } from '../chemistry3d/Glassware3D';
+import Fluid3D from '../chemistry3d/Fluid3D';
+import { PhPaperStrip3D, PhProbe3D } from '../chemistry3d/DippingProbes3D';
+import { EffervescenceBubbles3D, ThermalVaporSmoke3D } from '../chemistry3d/ParticleSystems3D';
+import TelemetryHUD3D from '../chemistry3d/TelemetryHUD3D';
 
+/**
+ * Real-time Interactive 3D Bench for pH Determination.
+ * Features 3D glassware, dynamic fluid color physics, dipping pH strips,
+ * glass electrode immersion, and floating analytical telemetry.
+ */
 export default function PhCanvas({
   solutionName = '0.1 M HCl',
   solutionCategory = 'Strong Acid',
@@ -14,350 +23,168 @@ export default function PhCanvas({
   probeImmersed = true,
   onDipPaper,
   onToggleProbe,
-  height = 235,
+  height = 245,
 }) {
-  const paperColor = paperDipped ? getUniversalColor(ph) : '#EFE8D3'; // Dry pale straw paper
+  const [temperatureC] = useState(25.0);
+  const paperColor = getUniversalColor(ph);
   const hConc = getHydroniumConc(ph);
   const ohConc = getHydroxideConc(ph);
 
-  return (
-    <View style={[styles.wrap, { height }]}>
-      {/* Header Info */}
-      <View style={styles.head}>
-        <View>
-          <Text style={styles.solTitle}>{solutionName}</Text>
-          <Text style={styles.solCategory}>{solutionCategory}</Text>
-        </View>
-        <View style={styles.naturePill}>
-          <Text
-            style={[
-              styles.natureText,
-              ph < 6.5 && { color: '#B23428' },
-              ph >= 6.5 && ph <= 7.5 && { color: '#2F8E6C' },
-              ph > 7.5 && { color: '#4668AE' },
-            ]}
-          >
-            {ph < 6.5 ? 'Acidic' : ph <= 7.5 ? 'Neutral' : 'Basic'}
-          </Text>
-        </View>
-      </View>
+  // Fluid color: soft translucent with slight pH tint
+  const fluidTint = ph < 3.0 ? '#FBEBEB' : ph > 11.0 ? '#EAF2FB' : '#F0F8FF';
 
-      {/* Interactive Beaker & Apparatus Bench */}
-      <View style={styles.benchRow}>
-        {/* Paper Strip Area */}
+  const hudOverlay = (
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      {/* Top Floating Telemetry & Solution Nature */}
+      <TelemetryHUD3D
+        title={solutionName}
+        category={solutionCategory}
+        ph={ph}
+        volumeMl={150}
+        temperatureC={temperatureC}
+        hConc={formatScientific(hConc)}
+        ohConc={formatScientific(ohConc)}
+      />
+
+      {/* Floating Apparatus Spatial Action Pills */}
+      <View style={styles.actionRow} pointerEvents="box-none">
         <Pressable
           onPress={onDipPaper}
-          style={({ pressed }) => [styles.stripCol, pressed && { opacity: 0.8 }]}
+          style={({ pressed }) => [
+            styles.actionPill,
+            paperDipped && styles.actionPillActive,
+            pressed && { opacity: 0.75 },
+          ]}
         >
-          <View style={styles.stripHolder}>
-            {/* Paper Strip */}
-            <View style={styles.stripDryTop} />
-            <View style={[styles.stripDippedTip, { backgroundColor: paperColor }]} />
-          </View>
-          <Text style={styles.stripLabel}>
-            {paperDipped ? 'Dipped Strip' : 'Tap to Dip Strip'}
+          <View
+            style={[
+              styles.colorDot,
+              { backgroundColor: paperDipped ? paperColor : '#EFE8D3' },
+            ]}
+          />
+          <Text style={[styles.actionText, paperDipped && { color: color.brass }]}>
+            {paperDipped ? 'Strip Dipped' : 'Dip pH Strip'}
           </Text>
         </Pressable>
 
-        {/* Central Beaker */}
-        <View style={styles.beakerCol}>
-          <View style={styles.beakerGlass}>
-            <View style={styles.beakerLip} />
-            <View style={styles.glassBody}>
-              {/* Probe immersion graphic inside beaker */}
-              {probeImmersed && (
-                <View style={styles.probeInBeaker}>
-                  <View style={styles.probeShaftInner} />
-                  <View style={styles.probeBulbInner} />
-                </View>
-              )}
-
-              {/* Paper strip immersion graphic inside beaker */}
-              {paperDipped && (
-                <View style={[styles.paperInBeaker, { backgroundColor: paperColor }]} />
-              )}
-
-              {/* Solution Liquid */}
-              <View
-                style={[
-                  styles.solutionLiquid,
-                  { backgroundColor: 'rgba(230, 245, 252, 0.65)' },
-                ]}
-              >
-                <View style={styles.liquidMeniscus} />
-              </View>
-            </View>
-          </View>
-          <Text style={styles.beakerLabel}>250 mL Beaker</Text>
-        </View>
-
-        {/* Probe Toggle Area */}
         <Pressable
           onPress={onToggleProbe}
-          style={({ pressed }) => [styles.probeCol, pressed && { opacity: 0.8 }]}
+          style={({ pressed }) => [
+            styles.actionPill,
+            probeImmersed && styles.actionPillActive,
+            pressed && { opacity: 0.75 },
+          ]}
         >
-          <View style={styles.probeStand}>
-            <View style={styles.probeCable} />
-            <View style={styles.probeBody}>
-              <View style={styles.probeShaft} />
-              <View
-                style={[
-                  styles.probeBulb,
-                  probeImmersed && { backgroundColor: 'rgba(47,142,108,0.5)' },
-                ]}
-              />
-            </View>
-          </View>
-          <Text style={styles.probeLabel}>
-            {probeImmersed ? 'Probe Immersed' : 'Probe Lifted'}
+          <View
+            style={[
+              styles.colorDot,
+              { backgroundColor: probeImmersed ? '#2F8E6C' : '#6E675E' },
+            ]}
+          />
+          <Text style={[styles.actionText, probeImmersed && { color: color.brass }]}>
+            {probeImmersed ? 'Probe Immersed' : 'Lift Probe'}
           </Text>
         </Pressable>
       </View>
-
-      {/* Auto-balancing Ion Level Indicators */}
-      <View style={styles.ionBarRow}>
-        <View style={styles.ionGroup}>
-          <Text style={styles.ionLabel}>[H⁺] Hydronium</Text>
-          <Text style={[styles.ionVal, { color: '#B23428' }]}>
-            {formatScientific(hConc)} M
-          </Text>
-        </View>
-        <View style={styles.ionDivider}>
-          <Text style={styles.kwText}>Kw = 10⁻¹⁴</Text>
-        </View>
-        <View style={[styles.ionGroup, { alignItems: 'flex-end' }]}>
-          <Text style={styles.ionLabel}>[OH⁻] Hydroxide</Text>
-          <Text style={[styles.ionVal, { color: '#4668AE' }]}>
-            {formatScientific(ohConc)} M
-          </Text>
-        </View>
-      </View>
     </View>
+  );
+
+  return (
+    <ChemistryStage
+      height={height}
+      initialOrbit={{ az: -0.28, el: 0.35, dist: 2.45 }}
+      target={[0, 0.42, 0]}
+      overlay={hudOverlay}
+    >
+      {/* Central 250 mL Laboratory Beaker */}
+      <Beaker3D position={[0, 0, 0]} radius={0.42} height={0.92}>
+        {/* Dynamic 3D Fluid Column with Meniscus */}
+        <Fluid3D
+          color={fluidTint}
+          height={0.58}
+          radiusTop={0.41}
+          radiusBottom={0.4}
+          position={[0, 0, 0]}
+          opacity={0.65}
+        />
+
+        {/* Effervescence Bubbles in Acidic / Active Solutions */}
+        <EffervescenceBubbles3D
+          active={ph < 3.5 || ph > 12.5}
+          intensity={ph < 2.0 ? 1.4 : 0.6}
+          liquidBase={[0, 0.05, 0]}
+          liquidRadius={0.38}
+          liquidHeight={0.52}
+        />
+
+        {/* Subtle Vapor for Volatile Solutions */}
+        <ThermalVaporSmoke3D
+          active={ph < 2.0}
+          origin={[0, 0.62, 0]}
+          radius={0.32}
+          temperature={38}
+        />
+      </Beaker3D>
+
+      {/* 3D pH Universal Indicator Paper Strip */}
+      <PhPaperStrip3D
+        position={[-0.52, 0.52, 0.1]}
+        isDipped={paperDipped}
+        dipColor={paperColor}
+      />
+
+      {/* 3D Glass pH Electrode Sensor Probe */}
+      <PhProbe3D
+        position={[0.52, 0.58, -0.05]}
+        isImmersed={probeImmersed}
+        bulbColor={ph < 6.5 ? '#B23428' : ph <= 7.5 ? '#2F8E6C' : '#4668AE'}
+      />
+    </ChemistryStage>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    backgroundColor: '#F7F3EB',
-    borderRadius: radius.card,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: color.hairline,
-    padding: 12,
-    justifyContent: 'space-between',
-    overflow: 'hidden',
-  },
-  head: {
+  actionRow: {
+    position: 'absolute',
+    bottom: 34,
+    left: 8,
+    right: 48,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    gap: 6,
+    zIndex: 15,
   },
-  solTitle: {
-    fontFamily: font.bold,
-    fontSize: 15,
-    color: color.inkStrong,
-    letterSpacing: -0.2,
-  },
-  solCategory: {
-    fontFamily: font.medium,
-    fontSize: 10,
-    color: color.inkMuted,
-  },
-  naturePill: {
-    paddingHorizontal: 10,
+  actionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255, 253, 248, 0.94)',
     paddingVertical: 4,
+    paddingHorizontal: 8,
     borderRadius: radius.pill,
-    backgroundColor: color.paper,
     borderWidth: 1,
-    borderColor: color.hairline,
+    borderColor: 'rgba(28, 24, 21, 0.12)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  natureText: {
-    fontFamily: font.bold,
-    fontSize: 9.5,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+  actionPillActive: {
+    backgroundColor: 'rgba(255, 253, 248, 0.98)',
+    borderColor: color.brass,
   },
-  benchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingVertical: 2,
-  },
-  stripCol: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  stripHolder: {
-    width: 14,
-    height: 70,
-    borderRadius: 2,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(28,24,21,0.2)',
-    backgroundColor: '#EFE8D3',
-  },
-  stripDryTop: {
-    flex: 1,
-    backgroundColor: '#EFE8D3',
-  },
-  stripDippedTip: {
-    height: 35,
-  },
-  stripLabel: {
-    fontFamily: font.bold,
-    fontSize: 9,
-    color: color.brass,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  beakerCol: {
-    alignItems: 'center',
-  },
-  beakerGlass: {
-    alignItems: 'center',
-  },
-  beakerLip: {
-    width: 74,
-    height: 4,
-    backgroundColor: 'rgba(160,190,210,0.8)',
-    borderRadius: 2,
-    borderWidth: 0.8,
-    borderColor: 'rgba(120,160,180,0.9)',
-  },
-  glassBody: {
-    width: 68,
-    height: 78,
-    backgroundColor: 'rgba(240,248,255,0.4)',
-    borderWidth: 1.5,
-    borderTopWidth: 0,
-    borderColor: 'rgba(120,160,180,0.7)',
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  probeInBeaker: {
-    position: 'absolute',
-    top: 0,
-    right: 14,
-    alignItems: 'center',
-    zIndex: 2,
-  },
-  probeShaftInner: {
+  colorDot: {
     width: 7,
-    height: 52,
-    backgroundColor: 'rgba(180,210,230,0.6)',
-    borderWidth: 1,
-    borderColor: 'rgba(100,150,180,0.8)',
-  },
-  probeBulbInner: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-    backgroundColor: 'rgba(80,180,240,0.8)',
-  },
-  paperInBeaker: {
-    position: 'absolute',
-    top: 15,
-    left: 12,
-    width: 10,
-    height: 45,
-    borderRadius: 2,
-    zIndex: 2,
-    borderWidth: 0.8,
+    height: 7,
+    borderRadius: 3.5,
+    borderWidth: 0.5,
     borderColor: 'rgba(0,0,0,0.15)',
   },
-  solutionLiquid: {
-    width: '100%',
-    height: '68%',
-    borderBottomLeftRadius: 7,
-    borderBottomRightRadius: 7,
-    position: 'relative',
-  },
-  liquidMeniscus: {
-    position: 'absolute',
-    top: 0,
-    left: 1,
-    right: 1,
-    height: 3,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    borderRadius: 2,
-  },
-  beakerLabel: {
-    fontFamily: font.medium,
-    fontSize: 8.5,
-    color: color.inkMuted,
-    marginTop: 3,
-  },
-  probeCol: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  probeStand: {
-    alignItems: 'center',
-    height: 70,
-    justifyContent: 'flex-end',
-  },
-  probeCable: {
-    width: 2.5,
-    height: 12,
-    backgroundColor: '#3E372F',
-  },
-  probeBody: {
-    alignItems: 'center',
-  },
-  probeShaft: {
-    width: 8,
-    height: 40,
-    backgroundColor: 'rgba(200,225,235,0.5)',
-    borderWidth: 1,
-    borderColor: 'rgba(120,160,180,0.7)',
-  },
-  probeBulb: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: 'rgba(100,180,240,0.5)',
-  },
-  probeLabel: {
+  actionText: {
     fontFamily: font.bold,
     fontSize: 9,
-    color: color.inkMuted,
-    textTransform: 'uppercase',
     letterSpacing: 0.4,
-  },
-  ionBarRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: color.paper,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: radius.chip,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: color.hairline,
-  },
-  ionGroup: {
-    gap: 1,
-  },
-  ionLabel: {
-    fontFamily: font.bold,
-    fontSize: 8,
-    letterSpacing: 0.8,
     textTransform: 'uppercase',
-    color: color.inkMuted,
-  },
-  ionVal: {
-    fontFamily: font.bold,
-    fontSize: 11,
-    fontVariant: ['tabular-nums'],
-  },
-  ionDivider: {
-    alignItems: 'center',
-  },
-  kwText: {
-    fontFamily: font.medium,
-    fontSize: 8.5,
-    color: color.inkMuted,
+    color: color.inkSoft,
   },
 });
