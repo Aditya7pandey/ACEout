@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
@@ -15,6 +15,7 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 
 import { color } from './src/theme';
+import { lockPortrait } from './src/utils/orientation';
 import { AppStateProvider, useAppState } from './src/store/AppState';
 import SplashScreen from './src/screens/SplashScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
@@ -53,6 +54,13 @@ function Root() {
   });
 
   const booted = fontsLoaded && ready;
+
+  // app.json declares `default` so the OS will permit a rotation at all; the
+  // app itself is portrait everywhere except the wide lab benches, which
+  // unlock it deliberately and put it back when they close.
+  useEffect(() => {
+    lockPortrait();
+  }, []);
 
   const onReady = useCallback(() => {
     if (booted) SplashScreenApi.hideAsync().catch(() => {});

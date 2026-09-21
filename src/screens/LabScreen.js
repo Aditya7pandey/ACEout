@@ -5,12 +5,14 @@ import { Page, BackButton, Rule } from '../components/ui';
 import InclineLab from '../labs/incline/InclineLab';
 import IndicatorsLab from '../labs/indicators/IndicatorsLab';
 import PhDeterminationLab from '../labs/ph_determination/PhDeterminationLab';
+import GravityLaunchLab from '../labs/gravity_launch/GravityLaunchLab';
 import { useAppState } from '../store/AppState';
 
 const REGISTRY = {
   'incline-work-energy': InclineLab,
   'acid-base-indicators': IndicatorsLab,
   'ph-determination': PhDeterminationLab,
+  'gravity-launch': GravityLaunchLab,
 };
 
 export default function LabScreen({ navigation, route }) {

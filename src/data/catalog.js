@@ -134,6 +134,12 @@ export const CHAPTERS = {
     'Plant Growth and Development',
   ]),
   '11|space': chapters([
+    {
+      title: 'Surface Gravity Across the Solar System',
+      labs: 3,
+      blurb:
+        'Drive a rover off a launch deck on one world after another. Same deck, same push, different pull — and out of the landing marks come a launch speed you never timed and the gravity of a world nobody named.',
+    },
     'Orbits and Escape Velocity',
     'Launch Windows and Transfer Orbits',
     'Life Support and Microgravity',
@@ -211,6 +217,38 @@ export const LABS = {
       tag1: 'Power',
       tag2: 'Stopwatch',
       art: ART.sea,
+    },
+  ],
+  '11|space|I': [
+    {
+      id: 'gravity-launch',
+      title: 'Launching a rover on eleven worlds',
+      mins: 20,
+      desc:
+        'Drive a car off the lip of a launch deck, change the gravity to another planet, and measure what that does to where it lands. R² against 1/g gives you the launch speed — and then the gravity of a sealed world.',
+      tag1: 'Projectile motion',
+      tag2: 'Graph + best fit',
+      art: ART.lilac,
+      built: true,
+      difficulty: 'Intermediate',
+    },
+    {
+      id: 'escape-velocity',
+      title: 'Escape velocity from a rocky body',
+      mins: 14,
+      desc: 'Fire straight up and hunt for the speed that never comes back down.',
+      tag1: 'Escape velocity',
+      tag2: 'Energy',
+      art: ART.slate,
+    },
+    {
+      id: 'weight-on-worlds',
+      title: 'Weighing yourself on every planet',
+      mins: 8,
+      desc: 'Take one spring balance on tour and separate mass from weight for good.',
+      tag1: 'Mass vs weight',
+      tag2: 'Spring balance',
+      art: ART.stone,
     },
   ],
   '11|chemistry|VI': [
@@ -321,6 +359,18 @@ export const SEARCH_INDEX = [
     chapterNo: 'I',
     art: ART.sea,
     keywords: 'refraction snell glass slab lateral displacement light',
+  },
+  {
+    id: 'gravity-launch',
+    title: 'Launching a rover on eleven worlds',
+    crumb: 'Class 11 · Space Exploration · I',
+    cls: '11',
+    subject: 'space',
+    chapterNo: 'I',
+    art: ART.lilac,
+    built: true,
+    keywords:
+      'gravity planet planets moon mars jupiter pluto venus saturn car rover launch projectile horizontal range space exploration surface gravity parabola trajectory fall',
   },
   {
     id: 'acid-base-indicators',
