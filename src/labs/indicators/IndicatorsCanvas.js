@@ -55,15 +55,15 @@ export default function IndicatorsCanvas({
         temperatureC={25.0}
         customMetrics={
           <>
-            <View style={styles.metricGroup}>
-              <Text style={styles.metricLabel}>Active Indicator</Text>
-              <Text style={[styles.metricVal, { color: color.brass }]}>
+            <View style={styles.metricGroupGrow}>
+              <Text style={styles.metricLabel} numberOfLines={1}>Active Indicator</Text>
+              <Text style={[styles.metricVal, { color: color.brass }]} numberOfLines={1} ellipsizeMode="tail">
                 {currentInd.short} · {currentInd.transitionDesc}
               </Text>
             </View>
-            <View style={[styles.metricGroup, { alignItems: 'flex-end' }]}>
-              <Text style={styles.metricLabel}>Dosage</Text>
-              <Text style={[styles.metricVal, { color: color.chemistry }]}>
+            <View style={styles.metricGroupFixed}>
+              <Text style={[styles.metricLabel, { textAlign: 'right' }]} numberOfLines={1}>Dosage</Text>
+              <Text style={[styles.metricVal, { color: color.chemistry, textAlign: 'right' }]} numberOfLines={1}>
                 {activeSol.drops || 0} drops
               </Text>
             </View>
@@ -263,19 +263,31 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: color.inkStrong,
   },
+  metricGroupGrow: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  metricGroupFixed: {
+    flexShrink: 0,
+    paddingLeft: 8,
+    gap: 1,
+  },
   metricGroup: {
+    flex: 1,
+    minWidth: 0,
     gap: 1,
   },
   metricLabel: {
     fontFamily: font.bold,
-    fontSize: 7.5,
-    letterSpacing: 0.7,
+    fontSize: 7,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
     color: color.inkMuted,
   },
   metricVal: {
     fontFamily: font.bold,
-    fontSize: 10,
+    fontSize: 9.5,
     fontVariant: ['tabular-nums'],
   },
 });

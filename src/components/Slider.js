@@ -16,6 +16,7 @@ export default function Slider({
   display,
   tone = color.brass,
   marks = [],
+  rangeZone = null, // { start, end, color }
   disabled,
   style,
 }) {
@@ -46,7 +47,6 @@ export default function Slider({
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (e) => setFromX(e.nativeEvent.locationX),
       onPanResponderMove: (e, gs) => {
-        // locationX is unreliable mid-drag on Android; derive from the grant point.
         setFromX(gs.x0 - originRef.current + gs.dx);
       },
     })
@@ -56,6 +56,30 @@ export default function Slider({
   const containerRef = useRef(null);
 
   const frac = max === min ? 0 : (value - min) / (max - min);
+
+  // Compute non-overlapping label layout
+  const labeledMarks = marks.filter((m) => m.label);
+  const markPositions = labeledMarks.map((m, idx) => {
+    const f = max === min ? 0 : (m.value - min) / (max - min);
+    return {
+      mark: m,
+      idealX: f * width,
+      idx,
+    };
+  });
+
+  // Adjust label x positions to prevent overlapping
+  const labelWidth = 48;
+  const minSpacing = 44;
+  for (let i = 1; i < markPositions.length; i++) {
+    const prev = markPositions[i - 1];
+    const curr = markPositions[i];
+    if (curr.idealX - prev.idealX < minSpacing) {
+      const overlap = minSpacing - (curr.idealX - prev.idealX);
+      prev.idealX = Math.max(labelWidth / 2, prev.idealX - overlap / 2);
+      curr.idealX = Math.min(width - labelWidth / 2, curr.idealX + overlap / 2);
+    }
+  }
 
   return (
     <View style={[styles.wrap, disabled && { opacity: 0.4 }, style]}>
@@ -81,8 +105,23 @@ export default function Slider({
         {...(disabled ? {} : pan.panHandlers)}
       >
         <View style={styles.track}>
+          {/* Optional Range Highlight Zone */}
+          {rangeZone && width > 0 ? (
+            <View
+              style={[
+                styles.rangeZone,
+                {
+                  left: `${Math.max(0, (rangeZone.start - min) / (max - min)) * 100}%`,
+                  width: `${Math.max(0, (rangeZone.end - rangeZone.start) / (max - min)) * 100}%`,
+                  backgroundColor: rangeZone.color || 'rgba(150,102,47,0.25)',
+                },
+              ]}
+            />
+          ) : null}
+
           <View style={[styles.fill, { width: `${frac * 100}%`, backgroundColor: tone }]} />
         </View>
+
         {marks.map((m) => {
           const f = max === min ? 0 : (m.value - min) / (max - min);
           return (
@@ -98,21 +137,27 @@ export default function Slider({
           style={[styles.thumb, { left: frac * width - 11, borderColor: tone }]}
         />
       </View>
-      {marks.some((m) => m.label) && width > 0 ? (
+
+      {labeledMarks.length > 0 && width > 0 ? (
         <View style={styles.markLabels} pointerEvents="none">
-          {marks
-            .filter((m) => m.label)
-            .map((m) => {
-              const f = max === min ? 0 : (m.value - min) / (max - min);
-              return (
-                <Text
-                  key={`l-${m.value}`}
-                  style={[styles.markLabel, { left: Math.max(0, f * width - 28) }]}
-                >
-                  {m.label}
-                </Text>
-              );
-            })}
+          {markPositions.map(({ mark, idealX }) => {
+            const clampedLeft = Math.max(0, Math.min(width - labelWidth, idealX - labelWidth / 2));
+            return (
+              <Text
+                key={`l-${mark.value}-${mark.label}`}
+                style={[
+                  styles.markLabel,
+                  {
+                    left: clampedLeft,
+                    color: mark.color || color.inkMuted,
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {mark.label}
+              </Text>
+            );
+          })}
         </View>
       ) : null}
     </View>
@@ -130,13 +175,20 @@ const styles = StyleSheet.create({
   },
   touch: { height: 34, justifyContent: 'center' },
   track: {
-    height: 3,
+    height: 4,
     borderRadius: 2,
     backgroundColor: 'rgba(28,24,21,0.11)',
     overflow: 'hidden',
+    position: 'relative',
+  },
+  rangeZone: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    borderRadius: 2,
   },
   fill: { height: '100%', borderRadius: 2 },
-  mark: { position: 'absolute', width: 1, height: 11, top: 11.5 },
+  mark: { position: 'absolute', width: 1.5, height: 12, top: 11 },
   thumb: {
     position: 'absolute',
     width: 22,
@@ -150,15 +202,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  markLabels: { height: 12 },
+  markLabels: { height: 14, position: 'relative' },
   markLabel: {
     position: 'absolute',
-    width: 56,
+    width: 48,
     textAlign: 'center',
     fontFamily: font.bold,
     fontSize: 8.5,
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
-    color: color.inkMuted,
   },
 });
