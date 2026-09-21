@@ -4,7 +4,7 @@ import { color, font, type, radius } from '../../theme';
 import { Eyebrow, GoldButton, Annotation, Segmented, withAlpha } from '../../components/ui';
 import GuidedFlow from './GuidedFlow';
 import FreePlay from './FreePlay';
-import OrientationGate from './OrientationGate';
+import OrientationGate from '../../components/OrientationGate';
 import { makeSimRef } from './LaunchScene';
 import { DEFAULT_PARAMS, MYSTERY_WORLDS } from './physics';
 import { makeErrorProfile, defaultErrorConfig, ERROR_KINDS } from './errors';
@@ -61,7 +61,16 @@ export default function GravityLaunchLab({ onComplete }) {
         contentContainerStyle={{ flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
       >
-        <OrientationGate onDone={() => setOriented(true)} />
+        <OrientationGate
+          onDone={() => setOriented(true)}
+          title="This bench is built to be read sideways"
+          body={
+            'The rover leaves the deck horizontally and travels a long way sideways for the short ' +
+            'distance it falls — on Pluto, nearly two metres across for every one it drops. In a ' +
+            'portrait column that flight is squeezed into a strip. Held wide, the whole parabola ' +
+            'and the entire length of the floor tape are on screen at once.'
+          }
+        />
       </ScrollView>
     );
   }

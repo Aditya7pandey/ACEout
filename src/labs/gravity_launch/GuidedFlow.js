@@ -30,7 +30,7 @@ import {
   initialState,
 } from './physics';
 import { STEPS, REPEATS_TIMED } from './steps';
-import { useLabLayout } from './layout';
+import { useLabLayout } from '../useLabLayout';
 
 const READ_TOLERANCE_CM = 0.15; // a correctly-read millimetre, plus a mark of slack
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { color, font, type, radius } from '../../theme';
 import {
@@ -11,14 +11,42 @@ import {
 import GuidedFlow from './GuidedFlow';
 import FreePlay from './FreePlay';
 import { makeErrorProfile, defaultErrorConfig, ERROR_KINDS } from './errors';
+import OrientationGate from '../../components/OrientationGate';
+import { lockPortrait } from '../../utils/orientation';
 
 export default function IndicatorsLab({ onComplete }) {
   const [mode, setMode] = useState('guided');
   const [started, setStarted] = useState(false);
+  const [oriented, setOriented] = useState(false);
   const [errorConfig, setErrorConfig] = useState(defaultErrorConfig());
   const [seed] = useState(() => Math.random());
 
   const profile = useMemo(() => makeErrorProfile(seed), [seed]);
+
+  // Whatever the student chose in the gate, the phone goes back upright when
+  // they leave the bench — the rest of the app is portrait.
+  useEffect(() => () => {
+    lockPortrait();
+  }, []);
+
+  if (!oriented) {
+    return (
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <OrientationGate
+          onDone={() => setOriented(true)}
+          tone={color.chemistry}
+          title={'Three beakers side by side — turn the screen'}
+          body={
+            'You are comparing three solutions at once, and they stand in a row on the bench. Upright, that row fills three-quarters of the frame and the floating solution pills sit on top of the glassware. Held wide, the beakers get room to breathe and the controls move off them.'
+          }
+        />
+      </ScrollView>
+    );
+  }
 
   if (!started) {
     return (

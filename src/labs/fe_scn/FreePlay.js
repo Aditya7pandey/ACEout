@@ -11,8 +11,13 @@ import {
   DEFAULT_FE_PARAMS,
   KC_TRUE,
 } from './chemistry';
+import { useLabLayout } from '../useLabLayout';
 
 export default function FreePlay() {
+  // Chemistry stages use a vertical field of view, so the apparatus is sized by
+  // the stage's height alone. Held wide there is less height to spend, so the
+  // stage takes a larger share of it.
+  const layout = useLabLayout({ portraitStage: 280, fraction: 0.7, maxStage: 320 });
   const [params, setParams] = useState({
     feMoles: 2.0e-6,
     scnMoles: 2.0e-6,
@@ -92,10 +97,11 @@ export default function FreePlay() {
   return (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[styles.scroll, layout.contentStyle]}
       showsVerticalScrollIndicator={false}
     >
       <FeScnCanvas
+        height={layout.stageHeight}
         tubes={tubes}
         selectedTubeId={0}
         shiftDirection={

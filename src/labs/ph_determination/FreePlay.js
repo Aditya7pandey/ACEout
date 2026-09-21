@@ -6,8 +6,13 @@ import PHColorScale from '../../instruments/PHColorScale';
 import PHMeter from '../../instruments/PHMeter';
 import PhCanvas from './PhCanvas';
 import { NCERT_SOLUTIONS, calculateSolutionMixture, formatScientific } from './chemistry';
+import { useLabLayout } from '../useLabLayout';
 
 export default function FreePlay() {
+  // Chemistry stages use a vertical field of view, so the apparatus is sized by
+  // the stage's height alone. Held wide there is less height to spend, so the
+  // stage takes a larger share of it.
+  const layout = useLabLayout({ portraitStage: 280, fraction: 0.7, maxStage: 320 });
   const [selectedSolId, setSelectedSolId] = useState('tomato');
   const [addDoseMl, setAddDoseMl] = useState(25);
   const [volumes, setVolumes] = useState({ tomato: 100 });
@@ -60,11 +65,12 @@ export default function FreePlay() {
   return (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[styles.scroll, layout.contentStyle]}
       showsVerticalScrollIndicator={false}
     >
       {/* Real-time 3D Chemistry Viewport */}
       <PhCanvas
+        height={layout.stageHeight}
         solutionName={mixture.name}
         solutionCategory={mixture.category}
         ph={mixture.ph}

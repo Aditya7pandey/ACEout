@@ -14,8 +14,13 @@ import GraphPlot from '../../measure/GraphPlot';
 import { STEPS } from './steps';
 import { INDICATORS, STANDARD_SOLUTIONS, getIndicatorColor, getIonizedFraction } from './chemistry';
 import IndicatorsCanvas from './IndicatorsCanvas';
+import { useLabLayout } from '../useLabLayout';
 
 export default function GuidedFlow({ profile, errorConfig, onFinish }) {
+  // Chemistry stages use a vertical field of view, so the apparatus is sized by
+  // the stage's height alone. Held wide there is less height to spend, so the
+  // stage takes a larger share of it.
+  const layout = useLabLayout({ portraitStage: 300, fraction: 0.7, maxStage: 320 });
   const [stepIdx, setStepIdx] = useState(0);
   const [selectedSolution, setSelectedSolution] = useState(0);
   const [solutionDrops, setSolutionDrops] = useState({
@@ -119,7 +124,7 @@ export default function GuidedFlow({ profile, errorConfig, onFinish }) {
   return (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[styles.scroll, layout.contentStyle]}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.stepHeader}>
@@ -129,6 +134,7 @@ export default function GuidedFlow({ profile, errorConfig, onFinish }) {
 
       {/* Visual Beaker Canvas */}
       <IndicatorsCanvas
+        height={layout.stageHeight}
         solutions={canvasSolutions}
         selectedIdx={selectedSolution}
         onSelectSolution={(idx) => setSelectedSolution(idx)}

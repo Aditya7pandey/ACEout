@@ -5,8 +5,13 @@ import { Eyebrow, GoldButton, GhostButton, Panel, Annotation, withAlpha } from '
 import Slider from '../../components/Slider';
 import IndicatorsCanvas from './IndicatorsCanvas';
 import { INDICATORS, STANDARD_SOLUTIONS, getIndicatorColor, getIonizedFraction } from './chemistry';
+import { useLabLayout } from '../useLabLayout';
 
 export default function FreePlay() {
+  // Chemistry stages use a vertical field of view, so the apparatus is sized by
+  // the stage's height alone. Held wide there is less height to spend, so the
+  // stage takes a larger share of it.
+  const layout = useLabLayout({ portraitStage: 280, fraction: 0.7, maxStage: 320 });
   const [ph, setPh] = useState(7.0);
   const [selectedIndKey, setSelectedIndKey] = useState('phenolphthalein');
   const [selectedPresetId, setSelectedPresetId] = useState(null);
@@ -33,10 +38,11 @@ export default function FreePlay() {
   return (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[styles.scroll, layout.contentStyle]}
       showsVerticalScrollIndicator={false}
     >
       <IndicatorsCanvas
+        height={layout.stageHeight}
         solutions={canvasSolutions}
         selectedIdx={0}
         activeIndicator={selectedIndKey}

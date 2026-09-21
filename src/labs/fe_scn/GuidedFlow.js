@@ -23,12 +23,17 @@ import {
 } from './chemistry';
 import { apparentAbsorbance } from './errors';
 import FeScnCanvas from './FeScnCanvas';
+import { useLabLayout } from '../useLabLayout';
 
 export default function GuidedFlow({
   profile,
   errorConfig,
   onFinish,
 }) {
+  // Chemistry stages use a vertical field of view, so the apparatus is sized by
+  // the stage's height alone. Held wide there is less height to spend, so the
+  // stage takes a larger share of it.
+  const layout = useLabLayout({ portraitStage: 300, fraction: 0.7, maxStage: 320 });
   const [stepIdx, setStepIdx] = useState(0);
   const [userReadings, setUserReadings] = useState({
     blank: '',
@@ -157,7 +162,7 @@ export default function GuidedFlow({
   return (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[styles.scroll, layout.contentStyle]}
       showsVerticalScrollIndicator={false}
     >
       {/* Header bar with step tracker */}
@@ -168,6 +173,7 @@ export default function GuidedFlow({
 
       {/* Visual Canvas */}
       <FeScnCanvas
+        height={layout.stageHeight}
         tubes={tubesData}
         selectedTubeId={selectedTube}
         onSelectTube={(idx) => setSelectedTube(idx)}

@@ -14,7 +14,7 @@ import {
   rangeOf,
   worldOf,
 } from './physics';
-import { useLabLayout } from './layout';
+import { useLabLayout } from '../useLabLayout';
 
 /**
  * Free play: every parameter is live, every number is on show, and nothing
@@ -26,7 +26,7 @@ import { useLabLayout } from './layout';
 export default function FreePlay({ params, setParams, simRef }) {
   const [live, setLive] = useState({ x: 0, y: 0, vx: 0, vy: 0, t: 0, phase: 'deck' });
   const [custom, setCustom] = useState(false);
-  const layout = useLabLayout(280);
+  const layout = useLabLayout({ portraitStage: 280 });
 
   // Sample the simulation for the HUD. The 3D scene owns the integration; this
   // only reads it, so the readouts can never disagree with the motion.

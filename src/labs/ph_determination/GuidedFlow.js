@@ -19,8 +19,13 @@ import { STEPS } from './steps';
 import { NCERT_SOLUTIONS, getHydroniumConc, formatScientific } from './chemistry';
 import { apparentMeterPH } from './errors';
 import PhCanvas from './PhCanvas';
+import { useLabLayout } from '../useLabLayout';
 
 export default function GuidedFlow({ profile, errorConfig, onFinish }) {
+  // Chemistry stages use a vertical field of view, so the apparatus is sized by
+  // the stage's height alone. Held wide there is less height to spend, so the
+  // stage takes a larger share of it.
+  const layout = useLabLayout({ portraitStage: 290, fraction: 0.7, maxStage: 320 });
   const [stepIdx, setStepIdx] = useState(0);
   const [activeSolIdx, setActiveSolIdx] = useState(0);
   const [paperDipped, setPaperDipped] = useState(false);
@@ -112,7 +117,7 @@ export default function GuidedFlow({ profile, errorConfig, onFinish }) {
   return (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[styles.scroll, layout.contentStyle]}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.stepHeader}>
@@ -122,6 +127,7 @@ export default function GuidedFlow({ profile, errorConfig, onFinish }) {
 
       {/* Visual Beaker Bench */}
       <PhCanvas
+        height={layout.stageHeight}
         solutionName={currentSol.name}
         solutionCategory={currentSol.category}
         ph={currentSol.truePH}
