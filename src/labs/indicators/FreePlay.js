@@ -9,6 +9,7 @@ import { INDICATORS, STANDARD_SOLUTIONS, getIndicatorColor, getIonizedFraction }
 export default function FreePlay() {
   const [ph, setPh] = useState(7.0);
   const [selectedIndKey, setSelectedIndKey] = useState('phenolphthalein');
+  const [selectedPresetId, setSelectedPresetId] = useState(null);
   const [drops, setDrops] = useState(3);
 
   const ind = INDICATORS[selectedIndKey] || INDICATORS.phenolphthalein;
@@ -23,6 +24,11 @@ export default function FreePlay() {
       indicatorKey: selectedIndKey,
     },
   ];
+
+  const handleSelectPreset = (s) => {
+    setPh(s.ph);
+    setSelectedPresetId(s.id);
+  };
 
   return (
     <ScrollView
@@ -69,28 +75,38 @@ export default function FreePlay() {
           max={14.0}
           step={0.1}
           onChange={setPh}
+          rangeZone={{ start: ind.rangeLow, end: ind.rangeHigh, color: withAlpha(color.brass, 0.18) }}
           marks={[
             { value: ind.rangeLow, color: color.red, label: `${ind.rangeLow}` },
-            { value: ind.pKIn, color: color.gold, label: `pK=${ind.pKIn}` },
+            { value: ind.pKIn, color: color.gold, label: `pK ${ind.pKIn}` },
             { value: ind.rangeHigh, color: color.green, label: `${ind.rangeHigh}` },
           ]}
         />
       </View>
 
+
+
       {/* Solution Presets */}
       <View style={{ gap: 8 }}>
         <Eyebrow>Preset Solutions</Eyebrow>
         <View style={styles.presetsRow}>
-          {STANDARD_SOLUTIONS.map((s) => (
-            <Pressable
-              key={s.id}
-              onPress={() => setPh(s.ph)}
-              style={({ pressed }) => [styles.presetBtn, pressed && { opacity: 0.7 }]}
-            >
-              <Text style={styles.presetName}>{s.name}</Text>
-              <Text style={styles.presetPh}>pH {s.ph}</Text>
-            </Pressable>
-          ))}
+          {STANDARD_SOLUTIONS.map((s) => {
+            const isActive = selectedPresetId === s.id;
+            return (
+              <Pressable
+                key={s.id}
+                onPress={() => handleSelectPreset(s)}
+                style={({ pressed }) => [
+                  styles.presetBtn,
+                  isActive && styles.presetBtnActive,
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Text style={[styles.presetName, isActive && { color: color.brass }]}>{s.name}</Text>
+                <Text style={[styles.presetPh, isActive && { color: color.brass }]}>pH {s.ph}</Text>
+              </Pressable>
+            );
+          })}
         </View>
       </View>
 
@@ -130,6 +146,10 @@ export default function FreePlay() {
           interval of pK_In ± 1.
         </Text>
       </Panel>
+
+      <View style={{ marginTop: 4 }}>
+        <GhostButton label="Reset to Neutral pH 7.0" onPress={() => { setPh(7.0); setDrops(3); }} />
+      </View>
     </ScrollView>
   );
 }
@@ -167,6 +187,10 @@ const styles = StyleSheet.create({
     fontFamily: font.medium,
     fontSize: 9,
     color: color.inkMuted,
+  },
+  presetBtnActive: {
+    borderColor: color.brass,
+    backgroundColor: 'rgba(150,102,47,0.10)',
   },
   presetsRow: {
     flexDirection: 'row',

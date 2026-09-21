@@ -12,13 +12,14 @@ import TelemetryHUD3D from '../chemistry3d/TelemetryHUD3D';
 
 /**
  * Real-time Interactive 3D Bench for pH Determination.
- * Features 3D glassware, dynamic fluid color physics, dipping pH strips,
- * glass electrode immersion, and floating analytical telemetry.
+ * Features dynamic volume fluid scaling, realistic physical color physics,
+ * dipping pH indicator strips, glass electrode sensor immersion, and floating telemetry HUD.
  */
 export default function PhCanvas({
   solutionName = '0.1 M HCl',
   solutionCategory = 'Strong Acid',
   ph = 1.0,
+  volumeMl = 100,
   paperDipped = false,
   probeImmersed = true,
   onDipPaper,
@@ -30,8 +31,25 @@ export default function PhCanvas({
   const hConc = getHydroniumConc(ph);
   const ohConc = getHydroxideConc(ph);
 
-  // Fluid color: soft translucent with slight pH tint
-  const fluidTint = ph < 3.0 ? '#FBEBEB' : ph > 11.0 ? '#EAF2FB' : '#F0F8FF';
+  // Scaled fluid column in 250 mL beaker
+  const safeVol = Math.max(0, volumeMl);
+  const fluidHeight = safeVol <= 0 ? 0.001 : Math.min(0.82, Math.max(0.06, (safeVol / 250) * 0.82));
+
+  // Fluid color tint according to solution nature
+  let fluidTint = '#F0F8FF';
+  if (solutionName.toLowerCase().includes('tomato')) {
+    fluidTint = '#E89080';
+  } else if (solutionName.toLowerCase().includes('lemon')) {
+    fluidTint = '#F5EDB0';
+  } else if (solutionName.toLowerCase().includes('magnesia')) {
+    fluidTint = '#E8ECEF';
+  } else if (ph < 3.0) {
+    fluidTint = '#FCE8E6';
+  } else if (ph > 11.0) {
+    fluidTint = '#E6F0FA';
+  } else {
+    fluidTint = '#F2F8FC';
+  }
 
   const hudOverlay = (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
@@ -40,7 +58,7 @@ export default function PhCanvas({
         title={solutionName}
         category={solutionCategory}
         ph={ph}
-        volumeMl={150}
+        volumeMl={safeVol}
         temperatureC={temperatureC}
         hConc={formatScientific(hConc)}
         ohConc={formatScientific(ohConc)}
@@ -99,28 +117,30 @@ export default function PhCanvas({
       {/* Central 250 mL Laboratory Beaker */}
       <Beaker3D position={[0, 0, 0]} radius={0.42} height={0.92}>
         {/* Dynamic 3D Fluid Column with Meniscus */}
-        <Fluid3D
-          color={fluidTint}
-          height={0.58}
-          radiusTop={0.41}
-          radiusBottom={0.4}
-          position={[0, 0, 0]}
-          opacity={0.65}
-        />
+        {safeVol > 0 && (
+          <Fluid3D
+            color={fluidTint}
+            height={fluidHeight}
+            radiusTop={0.41}
+            radiusBottom={0.4}
+            position={[0, 0, 0]}
+            opacity={solutionName.toLowerCase().includes('tomato') ? 0.9 : 0.68}
+          />
+        )}
 
         {/* Effervescence Bubbles in Acidic / Active Solutions */}
         <EffervescenceBubbles3D
-          active={ph < 3.5 || ph > 12.5}
+          active={safeVol > 0 && (ph < 3.5 || ph > 12.5)}
           intensity={ph < 2.0 ? 1.4 : 0.6}
           liquidBase={[0, 0.05, 0]}
           liquidRadius={0.38}
-          liquidHeight={0.52}
+          liquidHeight={fluidHeight}
         />
 
         {/* Subtle Vapor for Volatile Solutions */}
         <ThermalVaporSmoke3D
-          active={ph < 2.0}
-          origin={[0, 0.62, 0]}
+          active={safeVol > 0 && ph < 2.0}
+          origin={[0, Math.max(0.4, fluidHeight + 0.05), 0]}
           radius={0.32}
           temperature={38}
         />
