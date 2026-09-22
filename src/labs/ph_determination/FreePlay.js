@@ -1,60 +1,158 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from 'react-native';
 import { color, font, type, radius } from '../../theme';
-import { Eyebrow, GoldButton, GhostButton, Panel, Annotation, withAlpha } from '../../components/ui';
+import { Eyebrow, GoldButton, GhostButton, Segmented } from '../../components/ui';
 import PHColorScale from '../../instruments/PHColorScale';
 import PHMeter from '../../instruments/PHMeter';
 import PhCanvas from './PhCanvas';
-import { NCERT_SOLUTIONS, calculateSolutionMixture, formatScientific } from './chemistry';
+import {
+  NCERT_SOLUTIONS,
+  BIOLOGICAL_SOLUTIONS,
+  SALT_BUFFER_SOLUTIONS,
+  SOLUTION_PACKS,
+  TITRATION_DOSAGE_MODES,
+  TITRATION_REAGENTS,
+} from './chemistry';
 
 export default function FreePlay() {
-  const [selectedSolId, setSelectedSolId] = useState('tomato');
-  const [addDoseMl, setAddDoseMl] = useState(25);
-  const [volumes, setVolumes] = useState({ tomato: 100 });
+  // Solution Packs State
+  const [activePackId, setActivePackId] = useState('ncert');
+  const [selectedSolId, setSelectedSolId] = useState(NCERT_SOLUTIONS[0].id);
+  const [customSolutions, setCustomSolutions] = useState([
+    {
+      id: 'custom_1',
+      name: '0.05 M Oxalic Acid',
+      truePH: 1.8,
+      category: 'Diprotic Organic Acid',
+      approxPHPaper: 2,
+      desc: 'Dicarboxylic acid standard solution.',
+    },
+    {
+      id: 'custom_2',
+      name: 'Filtered Ocean Seawater',
+      truePH: 8.1,
+      category: 'Marine Carbonate System',
+      approxPHPaper: 8,
+      desc: 'Natural seawater buffered by dissolved inorganic carbon.',
+    },
+  ]);
+
+  // Custom Solution Creator Form State
+  const [newSolName, setNewSolName] = useState('');
+  const [newSolPH, setNewSolPH] = useState('5.5');
+  const [newSolCategory, setNewSolCategory] = useState('Mild Acid');
+  const [showAddCustom, setShowAddCustom] = useState(false);
+
+  // Titration & Perturbation State
+  const [customOffset, setCustomOffset] = useState(0);
+  const [dosageModeId, setDosageModeId] = useState('pipette');
   const [paperDipped, setPaperDipped] = useState(false);
   const [probeImmersed, setProbeImmersed] = useState(true);
 
-  // Compute real-time mixture equilibrium
-  const mixture = calculateSolutionMixture(volumes);
-  const activeSolutionDef = NCERT_SOLUTIONS.find((s) => s.id === selectedSolId) || NCERT_SOLUTIONS[3];
+  // Titration Volume Tracking Log
+  const [titrationLog, setTitrationLog] = useState({
+    acidMl: 0,
+    acidDrops: 0,
+    baseMl: 0,
+    baseDrops: 0,
+    diluentMl: 0,
+  });
 
-  // Add arbitrary volume of selected solution from rack
-  const handleAddRackSolution = (solId, vol) => {
-    setVolumes((prev) => {
-      const current = prev[solId] || 0;
-      const newTotal = Object.values(prev).reduce((a, b) => a + b, 0) + vol;
-      if (newTotal > 300) {
-        // Cap max beaker fill at 300 mL
-        const allowed = Math.max(0, 300 - (newTotal - vol));
-        return { ...prev, [solId]: current + allowed };
+  // Determine active solution list based on pack
+  const activeSolutionsList = useMemo(() => {
+    if (activePackId === 'ncert') return NCERT_SOLUTIONS;
+    if (activePackId === 'biological') return BIOLOGICAL_SOLUTIONS;
+    if (activePackId === 'salts_buffers') return SALT_BUFFER_SOLUTIONS;
+    return customSolutions;
+  }, [activePackId, customSolutions]);
+
+  // Find currently selected solution
+  const baseSol = useMemo(() => {
+    return (
+      activeSolutionsList.find((s) => s.id === selectedSolId) ||
+      activeSolutionsList[0] ||
+      NCERT_SOLUTIONS[0]
+    );
+  }, [activeSolutionsList, selectedSolId]);
+
+  const effectivePH = Math.min(14.0, Math.max(0.0, baseSol.truePH + customOffset));
+  const activeDosage = TITRATION_DOSAGE_MODES.find((m) => m.id === dosageModeId) || TITRATION_DOSAGE_MODES[1];
+
+  // Reagent Titration Handlers
+  const handleApplyReagent = (reagent) => {
+    const shift = reagent.baseShift * activeDosage.shiftMultiplier;
+    
+    if (reagent.type === 'diluent') {
+      // Pure water moderates pH towards 7.0
+      setCustomOffset((currOffset) => {
+        const currentPH = baseSol.truePH + currOffset;
+        const diffToNeutral = 7.0 - currentPH;
+        const dilutionShift = diffToNeutral * 0.15 * activeDosage.shiftMultiplier;
+        return currOffset + dilutionShift;
+      });
+      setTitrationLog((prev) => ({
+        ...prev,
+        diluentMl: Math.round((prev.diluentMl + activeDosage.volumeMl * 5) * 100) / 100,
+      }));
+    } else {
+      setCustomOffset((currOffset) => {
+        const newOffset = currOffset + shift;
+        const clampedPH = Math.min(14.0, Math.max(0.0, baseSol.truePH + newOffset));
+        return clampedPH - baseSol.truePH;
+      });
+
+      if (reagent.type.includes('acid')) {
+        setTitrationLog((prev) => ({
+          ...prev,
+          acidMl: Math.round((prev.acidMl + activeDosage.volumeMl) * 100) / 100,
+          acidDrops: prev.acidDrops + activeDosage.dropCount,
+        }));
+      } else if (reagent.type.includes('base')) {
+        setTitrationLog((prev) => ({
+          ...prev,
+          baseMl: Math.round((prev.baseMl + activeDosage.volumeMl) * 100) / 100,
+          baseDrops: prev.baseDrops + activeDosage.dropCount,
+        }));
       }
-      return { ...prev, [solId]: current + vol };
+    }
+  };
+
+  const resetTitration = () => {
+    setCustomOffset(0);
+    setTitrationLog({
+      acidMl: 0,
+      acidDrops: 0,
+      baseMl: 0,
+      baseDrops: 0,
+      diluentMl: 0,
     });
   };
 
-  // Fresh pour single solution (replaces current contents)
-  const handleFreshFill = (solId, vol = 100) => {
-    setVolumes({ [solId]: vol });
-    setSelectedSolId(solId);
+  const handleSelectSolution = (sol) => {
+    setSelectedSolId(sol.id);
+    resetTitration();
     setPaperDipped(false);
   };
 
-  // Titration pipette additions
-  const handleTitrate = (reagentId, volMl) => {
-    setVolumes((prev) => {
-      const current = prev[reagentId] || 0;
-      return { ...prev, [reagentId]: current + volMl };
-    });
-  };
+  const handleAddCustomSolution = () => {
+    const phVal = parseFloat(newSolPH);
+    if (!newSolName.trim() || isNaN(phVal) || phVal < 0 || phVal > 14) return;
 
-  const handleEmptyBeaker = () => {
-    setVolumes({});
-    setPaperDipped(false);
-  };
+    const newSol = {
+      id: `custom_${Date.now()}`,
+      name: newSolName.trim(),
+      truePH: Math.round(phVal * 100) / 100,
+      category: newSolCategory,
+      approxPHPaper: Math.round(phVal),
+      desc: `Custom user-prepared laboratory solution at initial pH ${phVal.toFixed(2)}.`,
+    };
 
-  const handleResetBenchmark = () => {
-    setVolumes({ [selectedSolId]: 100 });
-    setPaperDipped(false);
+    setCustomSolutions((prev) => [newSol, ...prev]);
+    setSelectedSolId(newSol.id);
+    setNewSolName('');
+    setNewSolPH('5.5');
+    setShowAddCustom(false);
+    resetTitration();
   };
 
   return (
@@ -63,33 +161,113 @@ export default function FreePlay() {
       contentContainerStyle={styles.scroll}
       showsVerticalScrollIndicator={false}
     >
-      {/* Real-time 3D Chemistry Viewport */}
+      {/* 3D Visual Laboratory Simulation Stage */}
       <PhCanvas
-        solutionName={mixture.name}
-        solutionCategory={mixture.category}
-        ph={mixture.ph}
-        volumeMl={mixture.totalVolumeMl}
+        solutionName={baseSol.name}
+        solutionCategory={baseSol.category}
+        ph={effectivePH}
         paperDipped={paperDipped}
         probeImmersed={probeImmersed}
         onDipPaper={() => setPaperDipped((d) => !d)}
         onToggleProbe={() => setProbeImmersed((p) => !p)}
       />
 
-      {/* Workbench Solution Rack */}
+      {/* Solution Packs Selector */}
       <View style={{ gap: 8 }}>
-        <View style={styles.sectionHeaderRow}>
-          <Eyebrow>Workbench Solution Rack</Eyebrow>
-          <Text style={styles.headerSub}>Tap to select · Add any amount</Text>
+        <View style={styles.headerRow}>
+          <Eyebrow tone={color.biology}>Workbench Solution Rack & Packs</Eyebrow>
+          <Text style={styles.packCountBadge}>
+            {activeSolutionsList.length} Solutions
+          </Text>
         </View>
 
+        <Segmented
+          value={activePackId}
+          onChange={(pack) => {
+            setActivePackId(pack);
+            if (pack === 'ncert') setSelectedSolId(NCERT_SOLUTIONS[0].id);
+            else if (pack === 'biological') setSelectedSolId(BIOLOGICAL_SOLUTIONS[0].id);
+            else if (pack === 'salts_buffers') setSelectedSolId(SALT_BUFFER_SOLUTIONS[0].id);
+            else if (customSolutions.length > 0) setSelectedSolId(customSolutions[0].id);
+            resetTitration();
+            setPaperDipped(false);
+          }}
+          options={[
+            { value: 'ncert', label: 'NCERT Standard' },
+            { value: 'biological', label: 'Everyday & Bio' },
+            { value: 'salts_buffers', label: 'Salts & Buffers' },
+            { value: 'custom', label: '+ Custom Pack' },
+          ]}
+        />
+
+        {/* Custom Solution Creator Toggle / Box */}
+        {activePackId === 'custom' && (
+          <View style={styles.customFormCard}>
+            <View style={styles.headerRow}>
+              <Text style={styles.customCardTitle}>Add New Custom Solution</Text>
+              <GhostButton
+                label={showAddCustom ? 'Cancel' : '+ New Solution'}
+                onPress={() => setShowAddCustom((v) => !v)}
+                compact
+              />
+            </View>
+
+            {showAddCustom && (
+              <View style={styles.customInputsWrap}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Solution Name / Formula:</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="e.g. 0.05 M Citric Acid"
+                    placeholderTextColor={color.inkMuted}
+                    value={newSolName}
+                    onChangeText={setNewSolName}
+                  />
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={[styles.inputGroup, { flex: 1 }]}>
+                    <Text style={styles.inputLabel}>Initial Base pH (0–14):</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      keyboardType="numeric"
+                      placeholder="e.g. 3.2"
+                      placeholderTextColor={color.inkMuted}
+                      value={newSolPH}
+                      onChangeText={setNewSolPH}
+                    />
+                  </View>
+                  <View style={[styles.inputGroup, { flex: 1.4 }]}>
+                    <Text style={styles.inputLabel}>Category / Chemical Nature:</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="e.g. Weak Polyprotic Acid"
+                      placeholderTextColor={color.inkMuted}
+                      value={newSolCategory}
+                      onChangeText={setNewSolCategory}
+                    />
+                  </View>
+                </View>
+
+                <GoldButton
+                  label="✓ Add Solution to Active Rack"
+                  onPress={handleAddCustomSolution}
+                  disabled={!newSolName.trim()}
+                  compact
+                />
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Active Solution Rack Grid */}
         <View style={styles.shelfGrid}>
-          {NCERT_SOLUTIONS.map((s) => {
-            const isSelected = selectedSolId === s.id;
-            const currentVolInBeaker = volumes[s.id] || 0;
+          {activeSolutionsList.map((s) => {
+            const isSelected = baseSol.id === s.id;
             return (
               <Pressable
                 key={s.id}
-                onPress={() => setSelectedSolId(s.id)}
+                onPress={() => handleSelectSolution(s)}
                 style={[styles.shelfCard, isSelected && styles.shelfCardActive]}
               >
                 <View style={styles.shelfCardTop}>
@@ -98,141 +276,134 @@ export default function FreePlay() {
                       styles.shelfCardName,
                       isSelected && { color: color.brass, fontFamily: font.bold },
                     ]}
+                    numberOfLines={2}
                   >
                     {s.name}
                   </Text>
-                  {currentVolInBeaker > 0 ? (
-                    <Text style={styles.inBeakerBadge}>{currentVolInBeaker.toFixed(0)} mL in beaker</Text>
-                  ) : null}
-                </View>
-                <Text style={styles.shelfCardPh}>Base pH {s.truePH.toFixed(1)} · {s.category}</Text>
-
-                {isSelected ? (
-                  <View style={styles.quickAddRow}>
-                    <Pressable
-                      onPress={() => handleAddRackSolution(s.id, addDoseMl)}
-                      style={({ pressed }) => [styles.quickAddBtn, pressed && { opacity: 0.7 }]}
-                    >
-                      <Text style={styles.quickAddText}>+ Add {addDoseMl} mL</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => handleFreshFill(s.id, 100)}
-                      style={({ pressed }) => [styles.freshFillBtn, pressed && { opacity: 0.7 }]}
-                    >
-                      <Text style={styles.freshFillText}>Fresh Fill (100 mL)</Text>
-                    </Pressable>
+                  <View
+                    style={[
+                      styles.phBadge,
+                      isSelected && { backgroundColor: color.brass, borderColor: color.brass },
+                    ]}
+                  >
+                    <Text style={[styles.phBadgeText, isSelected && { color: '#FFFDF8' }]}>
+                      pH {s.truePH.toFixed(1)}
+                    </Text>
                   </View>
-                ) : null}
+                </View>
+                <Text style={styles.shelfCardCat} numberOfLines={1}>
+                  {s.category}
+                </Text>
               </Pressable>
             );
           })}
         </View>
-
-        {/* Rack Dosage Selector */}
-        <View style={styles.doseSelectorBar}>
-          <Text style={styles.doseLabel}>Dosing Volume:</Text>
-          <View style={styles.doseChips}>
-            {[10, 25, 50, 100].map((dose) => (
-              <Pressable
-                key={dose}
-                onPress={() => setAddDoseMl(dose)}
-                style={[styles.doseChip, addDoseMl === dose && styles.doseChipActive]}
-              >
-                <Text
-                  style={[
-                    styles.doseChipText,
-                    addDoseMl === dose && { color: color.brass, fontFamily: font.bold },
-                  ]}
-                >
-                  +{dose} mL
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
       </View>
 
-      {/* Chemical Perturbation & Real-Time Titration Pipettes */}
+      {/* Titration / Addition Pipettes Workstation */}
       <View style={styles.perturbCard}>
-        <View style={styles.sectionHeaderRow}>
-          <Eyebrow>Titration / Addition Pipettes</Eyebrow>
-          <Text style={styles.headerSub}>Dynamic Real-time Neutralization & Dilution</Text>
+        <View style={styles.headerRow}>
+          <Eyebrow tone={color.chemistry}>Titration & Addition Pipettes</Eyebrow>
+          {customOffset !== 0 && (
+            <Text style={styles.offsetBadge}>
+              ΔpH: {customOffset > 0 ? `+${customOffset.toFixed(2)}` : customOffset.toFixed(2)}
+            </Text>
+          )}
         </View>
 
-        <View style={styles.perturbGrid}>
-          {/* Add Acid Pipette */}
-          <View style={styles.reagentCol}>
-            <Text style={[styles.reagentTitle, { color: color.red }]}>0.1 M HCl (Acidify)</Text>
-            <View style={styles.doseBtnRow}>
-              {[1, 5, 10].map((ml) => (
+        {/* Pipette Delivery Dosage Selector */}
+        <View style={styles.dosageRow}>
+          <Text style={styles.dosageLabel}>Delivery Mode:</Text>
+          <View style={styles.dosageBtns}>
+            {TITRATION_DOSAGE_MODES.map((mode) => {
+              const isActive = dosageModeId === mode.id;
+              return (
                 <Pressable
-                  key={ml}
-                  onPress={() => handleTitrate('hcl', ml)}
-                  style={({ pressed }) => [styles.titrateBtn, pressed && { opacity: 0.7 }]}
+                  key={mode.id}
+                  style={[styles.dosageBtn, isActive && styles.dosageBtnActive]}
+                  onPress={() => setDosageModeId(mode.id)}
                 >
-                  <Text style={[styles.titrateBtnText, { color: color.red }]}>+{ml} mL</Text>
+                  <Text
+                    style={[
+                      styles.dosageBtnText,
+                      isActive && styles.dosageBtnTextActive,
+                    ]}
+                  >
+                    {mode.name}
+                  </Text>
                 </Pressable>
-              ))}
-            </View>
-          </View>
-
-          {/* Add Base Pipette */}
-          <View style={styles.reagentCol}>
-            <Text style={[styles.reagentTitle, { color: color.physics }]}>0.1 M NaOH (Alkalinize)</Text>
-            <View style={styles.doseBtnRow}>
-              {[1, 5, 10].map((ml) => (
-                <Pressable
-                  key={ml}
-                  onPress={() => handleTitrate('naoh', ml)}
-                  style={({ pressed }) => [styles.titrateBtn, pressed && { opacity: 0.7 }]}
-                >
-                  <Text style={[styles.titrateBtnText, { color: color.physics }]}>+{ml} mL</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          {/* Add Water Dilution */}
-          <View style={styles.reagentCol}>
-            <Text style={[styles.reagentTitle, { color: color.green }]}>Pure H₂O (Dilute)</Text>
-            <View style={styles.doseBtnRow}>
-              {[10, 25, 50].map((ml) => (
-                <Pressable
-                  key={ml}
-                  onPress={() => handleTitrate('water', ml)}
-                  style={({ pressed }) => [styles.titrateBtn, pressed && { opacity: 0.7 }]}
-                >
-                  <Text style={[styles.titrateBtnText, { color: color.green }]}>+{ml} mL</Text>
-                </Pressable>
-              ))}
-            </View>
+              );
+            })}
           </View>
         </View>
+
+        {/* Pipette Reagents Grid */}
+        <View style={styles.reagentsGrid}>
+          {TITRATION_REAGENTS.map((reagent) => (
+            <Pressable
+              key={reagent.id}
+              onPress={() => handleApplyReagent(reagent)}
+              style={({ pressed }) => [
+                styles.reagentBtn,
+                { borderLeftColor: reagent.color, borderLeftWidth: 3.5 },
+                pressed && { opacity: 0.75, transform: [{ scale: 0.98 }] },
+              ]}
+            >
+              <Text style={[styles.reagentBtnText, { color: reagent.color }]}>
+                + Add {reagent.name}
+              </Text>
+              <Text style={styles.reagentBtnSub}>{reagent.desc}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Titration Live Telemetry Tracker */}
+        {(titrationLog.acidDrops > 0 || titrationLog.baseDrops > 0 || titrationLog.diluentMl > 0) && (
+          <View style={styles.titrationLogCard}>
+            <View style={styles.logItem}>
+              <Text style={styles.logVal}>{titrationLog.acidMl.toFixed(2)} mL</Text>
+              <Text style={styles.logSub}>Acid ({titrationLog.acidDrops} drops)</Text>
+            </View>
+            <View style={styles.logDivider} />
+            <View style={styles.logItem}>
+              <Text style={styles.logVal}>{titrationLog.baseMl.toFixed(2)} mL</Text>
+              <Text style={styles.logSub}>Base ({titrationLog.baseDrops} drops)</Text>
+            </View>
+            {titrationLog.diluentMl > 0 && (
+              <>
+                <View style={styles.logDivider} />
+                <View style={styles.logItem}>
+                  <Text style={styles.logVal}>{titrationLog.diluentMl.toFixed(1)} mL</Text>
+                  <Text style={styles.logSub}>H₂O Diluent</Text>
+                </View>
+              </>
+            )}
+          </View>
+        )}
       </View>
 
       {/* Digital pH Meter Readout */}
       <PHMeter
-        apparentPH={mixture.ph}
+        apparentPH={effectivePH}
         isImmersed={probeImmersed}
         onToggleImmerse={() => setProbeImmersed((p) => !p)}
         isCalibrated={true}
-        label={`Active Probe: ${mixture.name}`}
+        label={`Active Probe: ${baseSol.name}`}
       />
 
       {/* Universal pH Reference Scale */}
       <PHColorScale
-        highlightedPH={paperDipped ? mixture.ph : null}
-        selectedPH={Math.round(mixture.ph)}
+        highlightedPH={paperDipped ? effectivePH : null}
+        selectedPH={Math.round(effectivePH)}
       />
 
-      {/* Workbench Actions */}
-      <View style={styles.benchActionsRow}>
-        <View style={{ flex: 1 }}>
-          <GhostButton label="Clean / Empty Beaker" onPress={handleEmptyBeaker} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <GhostButton label="Reset to Initial (100 mL)" onPress={handleResetBenchmark} />
-        </View>
+      {/* Action Buttons */}
+      <View style={styles.footerRow}>
+        <GhostButton
+          label="Reset Solution to Initial pH"
+          onPress={resetTitration}
+          disabled={customOffset === 0 && titrationLog.acidDrops === 0 && titrationLog.baseDrops === 0}
+        />
       </View>
     </ScrollView>
   );
@@ -240,173 +411,225 @@ export default function FreePlay() {
 
 const styles = StyleSheet.create({
   scroll: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 40,
-    gap: 16,
+    gap: 14,
   },
-  sectionHeaderRow: {
+  headerRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
   },
-  headerSub: {
-    fontFamily: font.medium,
-    fontSize: 9.5,
+  packCountBadge: {
+    fontFamily: font.bold,
+    fontSize: 10,
     color: color.inkMuted,
+    backgroundColor: 'rgba(28, 24, 21, 0.05)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
   },
   shelfGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 8,
+    marginTop: 4,
   },
   shelfCard: {
-    width: '48.8%',
+    width: '48.5%',
     backgroundColor: color.paper,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: color.hairline,
-    borderRadius: radius.chip,
-    paddingVertical: 8,
-    paddingHorizontal: 9,
-    gap: 2,
+    borderWidth: 1.5,
+    borderColor: 'rgba(28, 24, 21, 0.1)',
+    borderRadius: radius.tile,
+    paddingVertical: 10,
+    paddingHorizontal: 11,
+    gap: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
   shelfCardActive: {
     borderColor: color.brass,
     backgroundColor: 'rgba(150,102,47,0.08)',
+    shadowOpacity: 0.08,
   },
   shelfCardTop: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    alignItems: 'center',
     gap: 4,
   },
   shelfCardName: {
-    fontFamily: font.semibold,
-    fontSize: 11,
-    color: color.inkStrong,
     flex: 1,
+    fontFamily: font.semibold,
+    fontSize: 11.5,
+    lineHeight: 15,
+    color: color.inkStrong,
   },
-  shelfCardPh: {
-    fontFamily: font.medium,
-    fontSize: 9,
+  phBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(28, 24, 21, 0.15)',
+    backgroundColor: '#FAF5EE',
+  },
+  phBadgeText: {
+    fontFamily: font.bold,
+    fontSize: 9.5,
+    color: color.inkBody,
+  },
+  shelfCardCat: {
+    fontFamily: font.regular,
+    fontSize: 9.5,
     color: color.inkMuted,
   },
-  inBeakerBadge: {
+  customFormCard: {
+    backgroundColor: '#FFFDF8',
+    borderWidth: 1,
+    borderColor: 'rgba(28, 24, 21, 0.12)',
+    borderRadius: radius.card,
+    padding: 12,
+    gap: 8,
+    marginTop: 4,
+  },
+  customCardTitle: {
     fontFamily: font.bold,
-    fontSize: 8,
-    color: color.brass,
-    backgroundColor: 'rgba(150,102,47,0.12)',
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  quickAddRow: {
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: 6,
-    paddingTop: 4,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(150,102,47,0.2)',
-  },
-  quickAddBtn: {
-    flex: 1,
-    backgroundColor: color.brass,
-    borderRadius: 4,
-    paddingVertical: 4,
-    alignItems: 'center',
-  },
-  quickAddText: {
-    fontFamily: font.bold,
-    fontSize: 8.5,
-    color: '#FFF8EE',
-  },
-  freshFillBtn: {
-    flex: 1,
-    backgroundColor: 'rgba(28,24,21,0.06)',
-    borderRadius: 4,
-    paddingVertical: 4,
-    alignItems: 'center',
-  },
-  freshFillText: {
-    fontFamily: font.medium,
-    fontSize: 8,
+    fontSize: 11.5,
     color: color.inkStrong,
   },
-  doseSelectorBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(28,24,21,0.03)',
-    borderRadius: radius.chip,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginTop: 2,
+  customInputsWrap: {
+    gap: 8,
+    marginTop: 4,
   },
-  doseLabel: {
+  inputGroup: {
+    gap: 3,
+  },
+  inputLabel: {
     fontFamily: font.medium,
     fontSize: 10,
     color: color.inkMuted,
   },
-  doseChips: {
-    flexDirection: 'row',
-    gap: 5,
-  },
-  doseChip: {
-    paddingVertical: 3,
-    paddingHorizontal: 7,
-    borderRadius: radius.pill,
+  textInput: {
+    height: 34,
+    backgroundColor: '#FAF5EE',
     borderWidth: 1,
-    borderColor: color.hairline,
-    backgroundColor: color.paper,
-  },
-  doseChipActive: {
-    borderColor: color.brass,
-    backgroundColor: 'rgba(150,102,47,0.12)',
-  },
-  doseChipText: {
-    fontFamily: font.semibold,
-    fontSize: 9,
-    color: color.inkSoft,
+    borderColor: 'rgba(28, 24, 21, 0.16)',
+    borderRadius: radius.chip,
+    paddingHorizontal: 10,
+    fontFamily: font.medium,
+    fontSize: 11.5,
+    color: color.inkStrong,
   },
   perturbCard: {
-    backgroundColor: color.paper,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: color.hairline,
-    borderRadius: radius.tile,
+    backgroundColor: '#FFFDF8',
+    borderWidth: 1,
+    borderColor: 'rgba(28, 24, 21, 0.12)',
+    borderRadius: radius.card,
     padding: 12,
     gap: 10,
   },
-  perturbGrid: {
+  offsetBadge: {
+    fontFamily: font.bold,
+    fontSize: 10,
+    color: color.chemistry,
+    backgroundColor: 'rgba(178, 52, 40, 0.08)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+  },
+  dosageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  reagentCol: {
+  dosageLabel: {
+    fontFamily: font.medium,
+    fontSize: 10.5,
+    color: color.inkMuted,
+  },
+  dosageBtns: {
+    flex: 1,
+    flexDirection: 'row',
     gap: 4,
   },
-  reagentTitle: {
-    fontFamily: font.bold,
-    fontSize: 9.5,
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
+  dosageBtn: {
+    flex: 1,
+    paddingVertical: 5,
+    paddingHorizontal: 4,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(28, 24, 21, 0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  doseBtnRow: {
+  dosageBtnActive: {
+    backgroundColor: color.brass,
+  },
+  dosageBtnText: {
+    fontFamily: font.semibold,
+    fontSize: 9.5,
+    color: color.inkSoft,
+  },
+  dosageBtnTextActive: {
+    color: '#FFFDF8',
+    fontFamily: font.bold,
+  },
+  reagentsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
   },
-  titrateBtn: {
-    flex: 1,
-    backgroundColor: 'rgba(28,24,21,0.03)',
+  reagentBtn: {
+    width: '48.5%',
+    backgroundColor: '#FAF5EE',
     borderWidth: 1,
-    borderColor: color.hairline,
+    borderColor: 'rgba(28, 24, 21, 0.08)',
     borderRadius: radius.chip,
-    paddingVertical: 7,
-    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    gap: 2,
   },
-  titrateBtnText: {
+  reagentBtnText: {
     fontFamily: font.bold,
-    fontSize: 9.5,
+    fontSize: 10.5,
   },
-  benchActionsRow: {
+  reagentBtnSub: {
+    fontFamily: font.regular,
+    fontSize: 8.5,
+    color: color.inkMuted,
+  },
+  titrationLogCard: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
+    backgroundColor: '#F5EFE6',
+    borderRadius: radius.tile,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    marginTop: 2,
+  },
+  logItem: {
+    alignItems: 'center',
+    gap: 1,
+  },
+  logVal: {
+    fontFamily: font.bold,
+    fontSize: 11,
+    color: color.inkStrong,
+  },
+  logSub: {
+    fontFamily: font.regular,
+    fontSize: 8.5,
+    color: color.inkMuted,
+  },
+  logDivider: {
+    width: 1,
+    height: 18,
+    backgroundColor: 'rgba(28, 24, 21, 0.12)',
+  },
+  footerRow: {
+    marginTop: 2,
   },
 });

@@ -53,7 +53,7 @@ export default function PhDeterminationLab({ onComplete }) {
           <Text style={[type.bodySoft, { lineHeight: 19 }]}>
             {mode === 'guided'
               ? 'Five systematic steps: measure 5 benchmark NCERT solutions with pH paper (L.C. 1), calibrate the digital probe, measure high-precision digital pH (L.C. 0.01), and plot pH vs -log[H+].'
-              : 'Interactive workbench with 8 solutions, dynamic acid/base drop titration, live paper color-matching, and digital probe readouts.'}
+              : 'Interactive workbench with 20+ solutions across NCERT, Biological & Salt Buffer packs, custom solution builder, multi-reagent titration pipettes, live paper color-matching, and digital probe telemetry.'}
           </Text>
         </View>
 
