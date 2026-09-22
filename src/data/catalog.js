@@ -125,7 +125,24 @@ export const CHAPTERS = {
     'Plant Kingdom',
     'Animal Kingdom',
     'Morphology of Flowering Plants',
-    'Anatomy of Flowering Plants',
+    {
+      title: 'Anatomy of Flowering Plants & Plant Physiology',
+      labs: 3,
+      blurb:
+        'Study osmotic plasmolysis in Rhoeo epidermal peels, calculate Stomatal Index in dicot vs monocot leaves, and measure differential transpiration rates using cobalt chloride paper.',
+      virtualLabs: [
+        {
+          id: 'plant-physiology',
+          title: 'Plant Physiology: Plasmolysis, Stomata & Transpiration',
+          description:
+            'NCERT Class 11 Biology: Real-time cellular plasmolysis/deplasmolysis, microscopic stomatal FOV counting, and cobalt chloride transpiration time-lapse.',
+          duration: '18 mins',
+          difficulty: 'Beginner',
+          ncertCode: 'BIO-11-CH-06/11',
+        },
+      ],
+    },
+    'Structural Organisation in Animals',
     'Cell — The Unit of Life',
     'Biomolecules',
     'Cell Cycle and Cell Division',
@@ -279,6 +296,21 @@ export const LABS = {
       ncertCode: 'EXP-11-CH-6.3',
     },
   ],
+  '11|biology|VI': [
+    {
+      id: 'plant-physiology',
+      title: 'Plant Physiology: Plasmolysis, Stomata & Transpiration',
+      mins: 18,
+      desc:
+        'Observe osmotic plasmolysis in Rhoeo peel, compare kidney vs dumbbell guard cells with FOV counting, and measure transpiration rates with cobalt chloride strips.',
+      tag1: 'Osmosis & Stomata',
+      tag2: 'Microscopic 3D Sim',
+      art: ART.sea,
+      built: true,
+      difficulty: 'Beginner',
+      ncertCode: 'BIO-11-CH-06/11',
+    },
+  ],
 };
 
 export function getLabs(cls, subjectKey, chapterNo) {
@@ -298,6 +330,18 @@ export function getLabs(cls, subjectKey, chapterNo) {
 }
 
 export const SEARCH_INDEX = [
+  {
+    id: 'plant-physiology',
+    title: 'Plant Physiology: Plasmolysis, Stomata & Transpiration',
+    crumb: 'Class 11 · Biology · VI',
+    cls: '11',
+    subject: 'biology',
+    chapterNo: 'VI',
+    art: ART.sea,
+    built: true,
+    keywords:
+      'plant physiology plasmolysis deplasmolysis stomata stomatal index transpiration cobalt chloride rhoeo hibiscus guard cells osmosis ncert class 11',
+  },
   {
     id: 'incline-work-energy',
     title: 'Box on an inclined plane',

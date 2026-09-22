@@ -6,6 +6,7 @@ import InclineLab from '../labs/incline/InclineLab';
 import IndicatorsLab from '../labs/indicators/IndicatorsLab';
 import PhDeterminationLab from '../labs/ph_determination/PhDeterminationLab';
 import GravityLaunchLab from '../labs/gravity_launch/GravityLaunchLab';
+import PlantPhysiologyLab from '../labs/plant_physiology/PlantPhysiologyLab';
 import { useAppState } from '../store/AppState';
 
 const REGISTRY = {
@@ -13,6 +14,7 @@ const REGISTRY = {
   'acid-base-indicators': IndicatorsLab,
   'ph-determination': PhDeterminationLab,
   'gravity-launch': GravityLaunchLab,
+  'plant-physiology': PlantPhysiologyLab,
 };
 
 export default function LabScreen({ navigation, route }) {
