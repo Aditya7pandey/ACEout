@@ -79,6 +79,194 @@ export const NCERT_SOLUTIONS = [
   },
 ];
 
+export const BIOLOGICAL_SOLUTIONS = [
+  {
+    id: 'gastric',
+    name: 'Human Gastric Juice',
+    truePH: 1.5,
+    category: 'Gastric Acid (HCl + Pepsin)',
+    approxPHPaper: 2,
+    desc: 'Hydrochloric acid secreted by gastric parietal cells to activate pepsinogen.',
+  },
+  {
+    id: 'orange',
+    name: 'Fresh Orange Juice',
+    truePH: 3.5,
+    category: 'Organic Acid (Citric & Ascorbic)',
+    approxPHPaper: 4,
+    desc: 'Rich in ascorbic acid (Vitamin C) and citric acid buffer systems.',
+  },
+  {
+    id: 'coffee',
+    name: 'Black Coffee',
+    truePH: 5.0,
+    category: 'Weak Acid (Chlorogenic)',
+    approxPHPaper: 5,
+    desc: 'Contains chlorogenic, quinic, and citric acids.',
+  },
+  {
+    id: 'saliva',
+    name: 'Human Saliva',
+    truePH: 6.8,
+    category: 'Biological Fluid (Near Neutral)',
+    approxPHPaper: 7,
+    desc: 'Maintains optimum enzymatic activity for salivary amylase (ptyalin).',
+  },
+  {
+    id: 'blood',
+    name: 'Human Blood / Plasma',
+    truePH: 7.4,
+    category: 'Physiological Buffer',
+    approxPHPaper: 7,
+    desc: 'Tightly regulated by carbonic acid-bicarbonate buffer system (H₂CO₃/HCO₃⁻).',
+  },
+  {
+    id: 'egg_white',
+    name: 'Fresh Egg White (Albumen)',
+    truePH: 8.0,
+    category: 'Mild Alkaline Protein',
+    approxPHPaper: 8,
+    desc: 'Fresh albumen containing dissolved carbonate equilibrium.',
+  },
+  {
+    id: 'soap',
+    name: 'Soapy Handwash Solution',
+    truePH: 9.5,
+    category: 'Alkaline Surfactant',
+    approxPHPaper: 10,
+    desc: 'Sodium or potassium salts of fatty acids (stearates/palmitates).',
+  },
+  {
+    id: 'bleach',
+    name: 'Household Bleach (NaOCl)',
+    truePH: 12.5,
+    category: 'Strong Oxidizing Alkaline',
+    approxPHPaper: 13,
+    desc: 'Sodium hypochlorite solution with high hydroxide alkalinity.',
+  },
+];
+
+export const SALT_BUFFER_SOLUTIONS = [
+  {
+    id: 'nh4cl',
+    name: '0.1 M Ammonium Chloride (NH₄Cl)',
+    truePH: 5.1,
+    category: 'Acidic Salt (Strong Acid + Weak Base)',
+    approxPHPaper: 5,
+    desc: 'NH₄⁺ undergoes cationic hydrolysis: NH₄⁺ + H₂O ⇌ NH₄OH + H⁺.',
+  },
+  {
+    id: 'nacl',
+    name: '0.1 M Sodium Chloride (NaCl)',
+    truePH: 7.0,
+    category: 'Neutral Salt (Strong Acid + Strong Base)',
+    approxPHPaper: 7,
+    desc: 'Neither Na⁺ nor Cl⁻ undergoes hydrolysis; pH remains perfectly neutral.',
+  },
+  {
+    id: 'ch3coona',
+    name: '0.1 M Sodium Acetate (CH₃COONa)',
+    truePH: 8.9,
+    category: 'Basic Salt (Weak Acid + Strong Base)',
+    approxPHPaper: 9,
+    desc: 'CH₃COO⁻ undergoes anionic hydrolysis: CH₃COO⁻ + H₂O ⇌ CH₃COOH + OH⁻.',
+  },
+  {
+    id: 'na2co3',
+    name: '0.1 M Sodium Carbonate (Na₂CO₃)',
+    truePH: 11.6,
+    category: 'Strong Basic Salt (Diprotic Hydrolysis)',
+    approxPHPaper: 12,
+    desc: 'Carbonate ion CO₃²⁻ hydrolyses strongly to produce OH⁻ ions.',
+  },
+  {
+    id: 'acetate_buffer',
+    name: 'Acetate Buffer (CH₃COOH + CH₃COONa)',
+    truePH: 4.75,
+    category: 'Acidic Buffer (pKa = 4.75)',
+    approxPHPaper: 5,
+    desc: 'Resists drastic pH changes upon addition of small amounts of strong acid or base.',
+  },
+  {
+    id: 'phosphate_buffer',
+    name: 'Phosphate Buffer (H₂PO₄⁻ / HPO₄²⁻)',
+    truePH: 7.2,
+    category: 'Physiological Neutral Buffer',
+    approxPHPaper: 7,
+    desc: 'Intracellular biological buffer regulating cellular physiological pH.',
+  },
+];
+
+export const SOLUTION_PACKS = {
+  ncert: {
+    id: 'ncert',
+    title: 'NCERT Standard Rack',
+    badge: '8 Core Solutions',
+    solutions: NCERT_SOLUTIONS,
+  },
+  biological: {
+    id: 'biological',
+    title: 'Biological & Everyday Pack',
+    badge: '8 Extra Solutions',
+    solutions: BIOLOGICAL_SOLUTIONS,
+  },
+  salts_buffers: {
+    id: 'salts_buffers',
+    title: 'Salts & Buffer Solutions Pack',
+    badge: '6 Special Solutions',
+    solutions: SALT_BUFFER_SOLUTIONS,
+  },
+};
+
+export const TITRATION_DOSAGE_MODES = [
+  { id: 'drop', name: '💧 Micro Dropper', volumeMl: 0.05, dropCount: 1, shiftMultiplier: 0.25, label: '1 drop (0.05 mL)' },
+  { id: 'pipette', name: '🧪 Standard Pipette', volumeMl: 0.25, dropCount: 5, shiftMultiplier: 1.0, label: '5 drops (0.25 mL)' },
+  { id: 'burette', name: '⚗️ Burette Stream', volumeMl: 1.0, dropCount: 20, shiftMultiplier: 2.5, label: '1 mL Stream' },
+];
+
+export const TITRATION_REAGENTS = [
+  {
+    id: 'hcl',
+    name: '0.1 M HCl',
+    type: 'acid',
+    color: '#B23428',
+    baseShift: -0.4,
+    desc: 'Strong Mineral Acid',
+  },
+  {
+    id: 'naoh',
+    name: '0.1 M NaOH',
+    type: 'base',
+    color: '#1E64C8',
+    baseShift: +0.4,
+    desc: 'Strong Caustic Base',
+  },
+  {
+    id: 'acetic',
+    name: '0.1 M CH₃COOH',
+    type: 'weak_acid',
+    color: '#D47A22',
+    baseShift: -0.2,
+    desc: 'Weak Organic Acid',
+  },
+  {
+    id: 'nh4oh',
+    name: '0.1 M NH₄OH',
+    type: 'weak_base',
+    color: '#2F8E6C',
+    baseShift: +0.2,
+    desc: 'Weak Alkaline Base',
+  },
+  {
+    id: 'water',
+    name: 'Pure H₂O',
+    type: 'diluent',
+    color: '#5C8A99',
+    baseShift: 0,
+    desc: 'Diluent (Neutralizes towards pH 7.0)',
+  },
+];
+
 export function getHydroniumConc(ph) {
   return Math.pow(10, -ph);
 }
