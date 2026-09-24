@@ -49,9 +49,6 @@ export default function GuidedFlow({ params, setParams, simRef, profile, errorCo
   const [stepIndex, setStepIndex] = useState(0);
   const [eyeOffset, setEyeOffset] = useState(errorConfig.parallax ? -0.55 : 0);
   const [d, setD] = useState({
-    balanceZeroRaw: '',
-    stopwatchZeroRaw: '',
-    grossMassRaw: '',
     massRaw: '',
     riseRaw: '',
     runRaw: '',
@@ -140,8 +137,6 @@ export default function GuidedFlow({ params, setParams, simRef, profile, errorCo
   // --- step gating ---------------------------------------------------------
   const complete = useMemo(() => {
     switch (step.kind) {
-      case 'zero':
-        return d.balanceZeroRaw !== '' && d.stopwatchZeroRaw !== '';
       case 'mass':
         return d.massRaw !== '';
       case 'geometry':
@@ -249,72 +244,23 @@ export default function GuidedFlow({ params, setParams, simRef, profile, errorCo
           ) : null}
         </View>
 
-        {step.kind === 'zero' ? (
-          <View style={styles.block}>
-            <Balance trueMassG={truth.massG} profile={profile} errorConfig={errorConfig} />
-            <ReadingInput
-              instrument={INSTRUMENTS.balance}
-              label="Balance reading with an empty pan"
-              value={d.balanceZeroRaw}
-              onChange={(v) => set({ balanceZeroRaw: v })}
-              extraError={
-                d.balanceZeroRaw !== '' &&
-                Math.abs(
-                  Number(d.balanceZeroRaw) - apparentMassG(0, profile, errorConfig)
-                ) > 0.5
-                  ? 'Read the display again — that is not the number it is showing with nothing on the pan.'
-                  : null
-              }
-              hint="Empty the pan and copy the display exactly, sign and all."
-            />
-            <Stopwatch
-              label="Stopwatch — press start and stop together"
-              zeroOffsetS={watch.zeroOffsetS}
-              startDelayS={watch.startDelayS}
-            />
-            <ReadingInput
-              instrument={INSTRUMENTS.stopwatch}
-              label="What the watch reads for a zero-length interval"
-              value={d.stopwatchZeroRaw}
-              onChange={(v) => set({ stopwatchZeroRaw: v })}
-              hint="A perfect watch would show 0.00 s. Yours may not."
-            />
-            <Annotation label="Why this matters">{step.note}</Annotation>
-          </View>
-        ) : null}
-
         {step.kind === 'mass' ? (
           <View style={styles.block}>
             <Balance trueMassG={truth.massG} profile={profile} errorConfig={errorConfig} />
             <ReadingInput
               instrument={INSTRUMENTS.balance}
               label="Reading with the block on the pan"
-              value={d.grossMassRaw}
-              onChange={(v) => set({ grossMassRaw: v })}
+              value={d.massRaw}
+              onChange={(v) => set({ massRaw: v })}
               extraError={
-                d.grossMassRaw !== '' &&
+                d.massRaw !== '' &&
                 Math.abs(
-                  Number(d.grossMassRaw) - apparentMassG(truth.massG, profile, errorConfig)
+                  Number(d.massRaw) - apparentMassG(truth.massG, profile, errorConfig)
                 ) > 0.5
                   ? 'That is not the number on the display.'
                   : null
               }
-            />
-            <ReadingInput
-              instrument={INSTRUMENTS.balance}
-              label="Corrected mass of the block"
-              value={d.massRaw}
-              onChange={(v) => set({ massRaw: v })}
-              extraError={
-                d.massRaw !== '' && d.grossMassRaw !== '' && d.balanceZeroRaw !== ''
-                  ? Math.abs(
-                      Number(d.massRaw) - (Number(d.grossMassRaw) - Number(d.balanceZeroRaw))
-                    ) > 0.5
-                    ? `Subtract the zero error from the gross reading: ${d.grossMassRaw} − (${d.balanceZeroRaw}) g.`
-                    : null
-                  : 'Record the empty-pan and loaded readings first.'
-              }
-              hint="Gross reading minus the zero error you measured in the last step."
+              hint="Copy the display exactly, sign and all."
             />
             <Annotation label="Least count">{step.note}</Annotation>
           </View>

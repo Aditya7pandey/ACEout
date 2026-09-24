@@ -12,20 +12,11 @@ export const REPEATS_PER_TRIAL = 2;
 
 export const STEPS = [
   {
-    id: 'zero-check',
-    kind: 'zero',
-    title: 'Check your instruments before you trust them',
-    instruction:
-      'Every measurement you are about to take rests on these three instruments telling the truth at zero. Empty the balance pan and read it. Start and stop the watch in the same motion and read it. Note what you find — you will subtract it later.',
-    note:
-      'An instrument that does not read zero when it is measuring nothing will be wrong by the same amount every single time. No amount of repeating will average it away.',
-  },
-  {
     id: 'mass',
     kind: 'mass',
     title: 'Find the mass of the block',
     instruction:
-      'Place the block on the pan and read the display. Then write down the corrected mass — the reading minus the zero error you just found.',
+      'Place the block on the pan and read the display. Copy it exactly as it reads — sign and all.',
     note: 'Least count 1 g, so quote the mass as a whole number of grams.',
   },
   {

@@ -162,6 +162,38 @@ export const CHAPTERS = {
     'Life Support and Microgravity',
     'Telescopes and the Deep Field',
   ]),
+  '12|physics': chapters([
+    'Electric Charges and Fields',
+    'Electrostatic Potential and Capacitance',
+    'Current Electricity',
+    'Moving Charges and Magnetism',
+    'Magnetism and Matter',
+    'Electromagnetic Induction',
+    'Alternating Current',
+    'Electromagnetic Waves',
+    {
+      title: 'Ray Optics and Optical Instruments',
+      labs: 5,
+      blurb:
+        'Trace light through mirrors, prisms and lenses — and through the one optical instrument everybody owns. Measure the near point and far point of three eyes, and work out the spectacles two of them need.',
+      virtualLabs: [
+        {
+          id: 'eye-defects',
+          title: 'The human eye: near point, far point and spectacles',
+          description:
+            'Find where the retinal image breaks up on a normal, a myopic and a hypermetropic eye, and derive both corrective lens powers.',
+          duration: '16 mins',
+          difficulty: 'Intermediate',
+          ncertCode: 'PHY-12-CH-09',
+        },
+      ],
+    },
+    'Wave Optics',
+    'Dual Nature of Radiation and Matter',
+    'Atoms',
+    'Nuclei',
+    'Semiconductor Electronics',
+  ]),
   '10|physics': chapters([
     { title: 'Light — Reflection and Refraction', labs: 6 },
     'The Human Eye and the Colourful World',
@@ -296,6 +328,58 @@ export const LABS = {
       ncertCode: 'EXP-11-CH-6.3',
     },
   ],
+  '12|physics|IX': [
+    {
+      id: 'eye-defects',
+      title: 'The human eye: near point, far point and spectacles',
+      mins: 16,
+      desc:
+        'Three eyes on one bench — healthy, short-sighted, long-sighted. Slide the arrow until the retinal image breaks up, read the distance, and your three numbers give you both spectacle prescriptions.',
+      tag1: 'Accommodation',
+      tag2: 'Myopia & hypermetropia',
+      art: ART.sea,
+      scene: 'eye',
+      built: true,
+      difficulty: 'Intermediate',
+      ncertCode: 'PHY-12-CH-09',
+    },
+    {
+      id: 'lens-focal-length',
+      title: 'Focal length of a convex lens',
+      mins: 14,
+      desc: 'Focus a distant window on a screen, then work the u–v method and plot 1/v against 1/u.',
+      tag1: 'Lens formula',
+      tag2: 'Graph + best fit',
+      art: ART.slate,
+    },
+    {
+      id: 'prism-deviation',
+      title: 'Angle of minimum deviation of a prism',
+      mins: 18,
+      desc: 'Rotate the prism through the turning point and pin the refractive index from it.',
+      tag1: 'Refraction',
+      tag2: 'Spectrometer',
+      art: ART.lilac,
+    },
+    {
+      id: 'concave-mirror-f',
+      title: 'Focal length of a concave mirror',
+      mins: 12,
+      desc: 'Find the centre of curvature by coincidence and halve it.',
+      tag1: 'Reflection',
+      tag2: 'Mirror formula',
+      art: ART.stone,
+    },
+    {
+      id: 'tir-critical-angle',
+      title: 'Total internal reflection and the critical angle',
+      mins: 10,
+      desc: 'Walk the angle of incidence up to the point where the refracted ray vanishes.',
+      tag1: 'Critical angle',
+      tag2: 'Optical fibre',
+      art: ART.sand,
+    },
+  ],
   '11|biology|VI': [
     {
       id: 'plant-physiology',
@@ -330,6 +414,19 @@ export function getLabs(cls, subjectKey, chapterNo) {
 }
 
 export const SEARCH_INDEX = [
+  {
+    id: 'eye-defects',
+    title: 'The human eye: near point, far point and spectacles',
+    crumb: 'Class 12 · Physics · IX',
+    cls: '12',
+    subject: 'physics',
+    chapterNo: 'IX',
+    art: ART.sea,
+    scene: 'eye',
+    built: true,
+    keywords:
+      'ray optics optical instruments human eye defects vision myopia short sight hypermetropia long sight near point far point accommodation retina cornea crystalline lens ciliary muscle dioptre power concave convex spectacles glasses prescription least distance of distinct vision ncert class 12',
+  },
   {
     id: 'plant-physiology',
     title: 'Plant Physiology: Plasmolysis, Stomata & Transpiration',

@@ -68,8 +68,8 @@ passing through the origin because a block released from rest has no speed at
 zero distance; toggling to the free fit and looking at the intercept is itself
 a diagnostic.
 
-**The procedure** (`src/labs/incline/steps.js`): check the instrument zeros →
-weigh the block → measure the rise and run and get θ by trigonometry → five
+**The procedure** (`src/labs/incline/steps.js`): weigh the block → measure the
+rise and run and get θ by trigonometry → five
 timed runs → plot → read a off the gradient and back out μ → audit
 W_gravity + W_friction against ΔK → report.
 

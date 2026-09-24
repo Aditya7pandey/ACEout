@@ -11,20 +11,11 @@ export const REPEATS_TIMED = 3;
 
 export const STEPS = [
   {
-    id: 'zero-check',
-    kind: 'zero',
-    title: 'Check your instruments before you trust them',
-    instruction:
-      'Two instruments are going to carry this whole experiment. Empty the balance pan and read it. Start and stop the watch in the same motion and read that too. Write down what you find — you will subtract it later.',
-    note:
-      'An instrument that does not read zero when it is measuring nothing will be wrong by the same amount every single time. No amount of repeating will average it away.',
-  },
-  {
     id: 'mass',
     kind: 'mass',
     title: 'Weigh the rover',
     instruction:
-      'Put the rover on the pan and read the display, then correct it for the zero error you just found.',
+      'Put the rover on the pan and read the display. Copy it exactly as it reads — sign and all.',
     note:
       'Keep this number. At the end of the lab, go back and look for it in a single one of your formulae. You will not find it — and that absence is a result, not an oversight.',
   },

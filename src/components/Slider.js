@@ -12,6 +12,8 @@ export default function Slider({
   max,
   step = 0.01,
   onChange,
+  onSlideStart,
+  onSlideEnd,
   label,
   display,
   tone = color.brass,
@@ -41,14 +43,25 @@ export default function Slider({
     [min, max, clampToStep, onChange]
   );
 
+  // The PanResponder is built once and would otherwise keep the props it saw on
+  // the first render for the life of the component. Everything it needs is read
+  // through this ref instead, which is refreshed every render.
+  const live = useRef({});
+  live.current = { setFromX, onSlideStart, onSlideEnd };
+
   const pan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (e) => setFromX(e.nativeEvent.locationX),
-      onPanResponderMove: (e, gs) => {
-        setFromX(gs.x0 - originRef.current + gs.dx);
+      onPanResponderGrant: (e) => {
+        live.current.onSlideStart?.();
+        live.current.setFromX(e.nativeEvent.locationX);
       },
+      onPanResponderMove: (e, gs) => {
+        live.current.setFromX(gs.x0 - originRef.current + gs.dx);
+      },
+      onPanResponderRelease: () => live.current.onSlideEnd?.(),
+      onPanResponderTerminate: () => live.current.onSlideEnd?.(),
     })
   ).current;
 
