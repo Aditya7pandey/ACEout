@@ -33,6 +33,7 @@ import SearchScreen from './src/screens/SearchScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import QuestsScreen from './src/screens/QuestsScreen';
 import CompleteScreen from './src/screens/CompleteScreen';
+import VoiceAssistantScreen from './src/voice/VoiceAssistantScreen';
 
 SplashScreenApi.preventAutoHideAsync().catch(() => {});
 
@@ -111,6 +112,7 @@ function Root() {
           <Stack.Screen name="Labs" component={LabsScreen} />
           <Stack.Screen name="Lab" component={LabScreen} />
           <Stack.Screen name="Complete" component={CompleteScreen} />
+          <Stack.Screen name="VoiceAssistant" component={VoiceAssistantScreen} />
           <Stack.Screen name="Search" component={SearchScreen} />
           <Stack.Screen name="Quests" component={QuestsScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />

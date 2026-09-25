@@ -1,10 +1,12 @@
-import React, { Suspense, lazy, useCallback, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useState, useEffect } from 'react';
 import { View, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Text, useLanguage, hasKey } from '../i18n';
-import { color, font } from '../theme';
+import { color, font, radius, bevel, shadow } from '../theme';
 import { Page, BackButton, Rule } from '../components/ui';
 import { getChapters } from '../data/catalog';
 import { useAppState } from '../store/AppState';
+import { isVoiceEnabled, checkOnline } from '../voice';
+import VoiceOverlay from '../voice/VoiceOverlay';
 
 /**
  * The benches, loaded when one is opened rather than when the app starts.
@@ -36,6 +38,7 @@ export default function LabScreen({ navigation, route }) {
   const Lab = REGISTRY[labId];
   const { completeLab } = useAppState();
   const { t } = useLanguage();
+  const [activeVoice, setActiveVoice] = useState(false);
 
   // The catalogue is English. A bench that has been translated names itself in
   // the string catalogue, and the bar prefers that when it is there.
@@ -47,6 +50,16 @@ export default function LabScreen({ navigation, route }) {
   // `onChrome(false)` when they open and `onChrome(true)` when they come back
   // out. A lab that never calls it keeps the bar, which is the old behaviour.
   const [chrome, setChrome] = useState(true);
+
+  // Voice AI: check connectivity so the "Ask AI" button only appears online.
+  const hasVoice = isVoiceEnabled(labId);
+  const [isOnline, setIsOnline] = useState(false);
+  useEffect(() => {
+    if (!hasVoice) return;
+    checkOnline().then(setIsOnline);
+    const id = setInterval(() => checkOnline().then(setIsOnline), 30000);
+    return () => clearInterval(id);
+  }, [hasVoice]);
 
   /**
    * A finished bench hands over to the reward screen, which owns the way back
@@ -131,6 +144,23 @@ export default function LabScreen({ navigation, route }) {
           <Text style={styles.exitGlyph}>←</Text>
         </Pressable>
       )}
+
+      {/* Floating Ask AI Button / Voice Overlay */}
+      {hasVoice && isOnline && (
+        activeVoice ? (
+          <VoiceOverlay labId={labId} onClose={() => setActiveVoice(false)} />
+        ) : (
+          <Pressable
+            onPress={() => setActiveVoice(true)}
+            style={({ pressed }) => [
+              styles.fabAi,
+              pressed && { transform: [{ translateY: 3 }], borderBottomWidth: 1 },
+            ]}
+          >
+            <Text style={styles.fabAiText}>✨ Ask AI</Text>
+          </Pressable>
+        )
+      )}
     </Page>
   );
 }
@@ -185,5 +215,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 21,
     color: color.inkMuted,
+  },
+
+  // Purple is the design system's prompt colour, and depth here is the same
+  // hard bottom edge every other pressable block in the app carries.
+  fabAi: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    backgroundColor: color.purple,
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    ...bevel(color.purpleDeep),
+    ...shadow.raised,
+  },
+  fabAiText: {
+    fontFamily: font.displayBold,
+    fontSize: 14,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
 });
