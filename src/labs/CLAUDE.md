@@ -1,18 +1,23 @@
 # The lab contract
 
-Read this before building a new lab. Every bench in ACEout ships the five
+Read this before building a new lab. Every bench in LabVR ships the five
 things below, wherever the experiment can carry them. A lab that hands the
 student a number teaches nothing — the point is that every value in the final
 report traces back to a graduation they read themselves.
 
-`incline/` is the reference implementation. When something here is unclear,
-open the matching file there.
+`ray_optics_eye/` is the reference implementation — it is the bench that is
+translated, and the one whose shape (`steps.js` as data, a station walk with
+named beats, a short closing report) the others are being moved onto.
+`incline/` follows the same shape in English and is the simpler read; both
+carry a comment block naming the parts of this contract they cannot honour.
 
 ---
 
 ## 1. Two modes
 
-Guided and free play, chosen before the bench opens.
+Guided and free play, switched from the strip above the bench. There is no
+setup page: a lab opens on step one, and `LabShell` carries the mode toggle
+and the fault switches so no bench has to build them again.
 
 - **Guided** — a fixed procedure, one step at a time, each step validated
   before the next unlocks. Validate the *action* (did they read the instrument
@@ -23,10 +28,24 @@ Guided and free play, chosen before the bench opens.
   set the angle past the point where the block never moves, take the mass to
   zero, and watch what happens.
 
-Pattern: `InclineLab.js` holds `mode` in a `<Segmented>`, randomises the bench
-from a per-session seed so answers cannot be memorised between runs, then
-renders `GuidedFlow` or `FreePlay`. Steps live in their own `steps.js` as
-data, not as JSX.
+Pattern: `InclineLab.js` holds `mode` and `errorConfig`, randomises the bench
+from a per-session seed so answers cannot be memorised between runs, and hands
+both to `<LabShell>`, which renders `GuidedFlow` or `FreePlay` beneath its
+strip. Steps live in their own `steps.js` as data, not as JSX.
+
+Benches are portrait. The app is locked upright and no lab asks for the phone
+to be turned; if a stage needs more room, spend height rather than asking for
+width.
+
+**A translated bench** keeps its copy in `src/i18n/strings.js`, not in
+`steps.js` — `ray_optics_eye` is the worked example. Its `steps.js` holds only
+what a station *is*, every string is keyed `eye.<station>.<beat>`, and the pure
+modules (`optics.js`, `RetinalView.js`) return catalogue *keys* rather than
+sentences so they stay language-free. Swap `import { Text } from '../../i18n'`
+for react-native's and the file picks up a Devanagari face for any string that
+needs one. Anything written into the student's saved record — `readingLabel`,
+for instance — stays English, so a record is comparable whatever language the
+bench was run in.
 
 ## 2. Real measurement, not readouts
 
@@ -91,7 +110,7 @@ import {
 
 ## 5. Error injection, optional and per-run
 
-Offered as toggles on the setup screen, off by default. These are what school
+Offered as toggles behind the Faults pill in `LabShell`, off by default. These are what school
 practicals actually assess.
 
 `incline/errors.js` is the model: `ERROR_KINDS` describes each fault in the
@@ -110,13 +129,21 @@ student *sees*.
 The rule: the fault is applied to what is *displayed*, never announced in a
 readout. The student has to notice it and, in guided mode, correct for it.
 
+A bench that takes **one reading per station** should pass no `errorKinds` at
+all, and say so in its container. A fault the student has no repeat to compare
+against is not a fault they can catch — it is just a wrong answer. `incline/`
+and `ray_optics_eye/` both opt out on exactly these grounds. Note that
+`incline/errors.js` stays regardless of whether that bench uses it:
+`MetreScale` and `Balance` import their `apparent*` helpers from it.
+
 ---
 
 ## Wiring a new lab in
 
 1. Build it under `src/labs/<slug>/` following the incline layout:
-   `<Name>Lab.js` (container, mode, error toggles, seed), `GuidedFlow.js`,
-   `FreePlay.js`, `steps.js`, `physics.js`, `errors.js`, `<Name>Scene.js`.
+   `<Name>Lab.js` (container: mode, errorConfig, seed, and a `<LabShell>`),
+   `GuidedFlow.js`, `FreePlay.js`, `steps.js`, `physics.js`, `errors.js`,
+   `<Name>Scene.js`.
 2. Call `onComplete({ data, analysis, sf })` when the report is finished —
    that is what gets persisted to the student's record.
 3. Register the component in `REGISTRY` in `src/screens/LabScreen.js`.

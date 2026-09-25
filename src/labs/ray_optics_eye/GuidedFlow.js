@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Animated,
   Pressable,
@@ -9,6 +8,9 @@ import {
 } from 'react-native';
 import { color, font, radius, shadow } from '../../theme';
 import { withAlpha } from '../../components/ui';
+// Language-aware Text: one import makes every string in this file carry the
+// Devanagari face when the bench is running in Hindi.
+import { Text, useLanguage } from '../../i18n';
 import Slider from '../../components/Slider';
 import EyeScene from './EyeScene';
 import RetinalView, { verdictFor } from './RetinalView';
@@ -44,6 +46,7 @@ const POV_H = Math.round((POV_W * 120) / 208);
 export default function GuidedFlow({ onFinish }) {
   const { width: winW, height: winH } = useWindowDimensions();
   const landscape = winW > winH;
+  const { t } = useLanguage();
 
   const [frame, setFrame] = useState({ w: 0, h: 0 });
   const [idx, setIdx] = useState(0);
@@ -149,7 +152,7 @@ export default function GuidedFlow({ onFinish }) {
     if (banked.current === station.key) return;
     const verdict = checkReading(station, objectCm);
     if (!verdict.ok) {
-      setNudge(verdict.hint);
+      setNudge(t(verdict.hintKey, { dir: t(verdict.dirKey) }));
       return;
     }
     banked.current = station.key;
@@ -159,7 +162,8 @@ export default function GuidedFlow({ onFinish }) {
       ...r,
       {
         stationKey: station.key,
-        eyeName: station.name,
+        // English, deliberately: this goes into the saved lab record, which
+        // has to stay comparable whatever language the bench was run in.
         limit: station.readingLabel,
         readingCm: reading,
         sf: sigFigsForReading(reading, BENCH.leastCount),
@@ -167,7 +171,7 @@ export default function GuidedFlow({ onFinish }) {
       },
     ]);
     setNudge(null);
-    setBeat(station.reveal ? 'reveal' : 'done');
+    setBeat(station.hasReveal ? 'reveal' : 'done');
   };
 
   const advance = () => {
@@ -218,11 +222,15 @@ export default function GuidedFlow({ onFinish }) {
             />
           ))}
           <Text style={styles.pipLabel} numberOfLines={1}>
-            {station.ordinal} · {station.name}
+            {t(`eye.${station.key}.ordinal`)} · {t(`eye.${station.key}.name`)}
           </Text>
         </View>
 
-        <SharpnessMeter focus={shownFocus} corrected={wearing} clinical={station.clinical} />
+        <SharpnessMeter
+          focus={shownFocus}
+          corrected={wearing}
+          clinical={t(`eye.${station.key}.clinical`)}
+        />
       </View>
 
       <View
@@ -271,19 +279,19 @@ export default function GuidedFlow({ onFinish }) {
             <View style={[styles.dot, { backgroundColor: station.tone }]} />
             <Text style={[styles.boxEyebrow, { color: station.tone }]}>
               {beat === 'reveal'
-                ? 'The correction'
+                ? t('eye.beat.correction')
                 : beat === 'record'
-                ? 'Take the reading'
-                : station.ordinal}
+                ? t('eye.beat.reading')
+                : t(`eye.${station.key}.ordinal`)}
             </Text>
           </View>
 
           {beat === 'brief' ? (
             <>
-              <Text style={styles.boxTitle}>{station.name}</Text>
-              <Text style={styles.boxBody}>{station.brief}</Text>
+              <Text style={styles.boxTitle}>{t(`eye.${station.key}.name`)}</Text>
+              <Text style={styles.boxBody}>{t(`eye.${station.key}.brief`)}</Text>
               <Text style={[styles.boxPrompt, { color: station.tone }]}>
-                ↓ {station.prompt}
+                ↓ {t(`eye.${station.key}.prompt`)}
               </Text>
             </>
           ) : null}
@@ -292,7 +300,9 @@ export default function GuidedFlow({ onFinish }) {
             <>
               <View style={styles.readingRow}>
                 <View>
-                  <Text style={styles.readingLabel}>{station.readingLabel}</Text>
+                  <Text style={styles.readingLabel}>
+                    {t(`eye.${station.key}.readingLabel`)}
+                  </Text>
                   <Text style={styles.reading}>{objectCm.toFixed(1)} cm</Text>
                 </View>
                 <Pressable
@@ -303,22 +313,20 @@ export default function GuidedFlow({ onFinish }) {
                     pressed && { opacity: 0.82 },
                   ]}
                 >
-                  <Text style={styles.recordLabel}>Record</Text>
+                  <Text style={styles.recordLabel}>{t('eye.action.record')}</Text>
                 </Pressable>
               </View>
               <Text style={[styles.boxBody, nudge && styles.boxBodyTight]}>
-                {nudge || station.record}
+                {nudge || t(`eye.${station.key}.record`)}
               </Text>
-              {nudge ? (
-                <Text style={styles.nudgeTag}>Not the limit yet — keep working</Text>
-              ) : null}
+              {nudge ? <Text style={styles.nudgeTag}>{t('eye.nudge.tag')}</Text> : null}
             </>
           ) : null}
 
           {beat === 'reveal' ? (
             <>
-              <Text style={styles.boxTitle}>{station.revealTitle}</Text>
-              <Text style={styles.boxBody}>{station.reveal}</Text>
+              <Text style={styles.boxTitle}>{t(`eye.${station.key}.revealTitle`)}</Text>
+              <Text style={styles.boxBody}>{t(`eye.${station.key}.reveal`)}</Text>
               <Pressable
                 onPress={advance}
                 style={({ pressed }) => [
@@ -329,7 +337,9 @@ export default function GuidedFlow({ onFinish }) {
                 ]}
               >
                 <Text style={styles.recordLabel}>
-                  {idx === STATIONS.length - 1 ? 'Finish and see the theory' : 'Next eye'}
+                  {idx === STATIONS.length - 1
+                    ? t('eye.action.finish')
+                    : t('eye.action.next')}
                 </Text>
               </Pressable>
             </>
@@ -351,7 +361,9 @@ export default function GuidedFlow({ onFinish }) {
           onSlideEnd={onSlideEnd}
           disabled={locked}
           tone={station.tone}
-          label={`Object distance · move it ${station.direction === 'in' ? 'towards' : 'away from'} the eye`}
+          label={t('eye.slider.object', {
+            dir: t(station.direction === 'in' ? 'eye.slider.towards' : 'eye.slider.away'),
+          })}
           display={`${objectCm.toFixed(1)} cm`}
         />
       </View>
@@ -372,6 +384,7 @@ export default function GuidedFlow({ onFinish }) {
 function SharpnessMeter({ focus, corrected, clinical }) {
   const { sharpness, sharp, straining, blurCm } = focus;
   const verdict = verdictFor(sharpness, sharp, corrected);
+  const { t } = useLanguage();
 
   return (
     <View style={styles.meter} pointerEvents="none">
@@ -381,9 +394,9 @@ function SharpnessMeter({ focus, corrected, clinical }) {
 
       <View style={styles.meterBody}>
         <View style={styles.meterRow}>
-          <Text style={styles.meterEyebrow}>Retinal image</Text>
+          <Text style={styles.meterEyebrow}>{t('eye.meter.title')}</Text>
           <Text style={[styles.meterValue, { color: verdict.tone }]} numberOfLines={1}>
-            {verdict.label}
+            {t(verdict.key)}
           </Text>
           {/* The blur circle in millimetres, to the two decimals a prescription
               is written to. It reads 0.00 for the last stretch before the limit,
@@ -403,10 +416,10 @@ function SharpnessMeter({ focus, corrected, clinical }) {
         <Text style={styles.meterNote} numberOfLines={1}>
           {clinical} ·{' '}
           {corrected
-            ? 'spectacle lens doing the work'
+            ? t('eye.lensState.corrected')
             : straining
-            ? 'lens at full accommodation'
-            : 'lens relaxed within range'}
+            ? t('eye.lensState.straining')
+            : t('eye.lensState.relaxed')}
         </Text>
       </View>
     </View>
@@ -424,19 +437,18 @@ const styles = StyleSheet.create({
   track: { position: 'absolute', top: 0, left: 0, bottom: 0, flexDirection: 'row' },
 
   // Progress on the left, retinal readout on the right. They sit side by side
-  // when there is room and stack on a narrow portrait phone. The left padding
-  // clears the screen's floating back button, which the bench hides its own
-  // title bar for.
+  // when there is room and stack on a narrow portrait phone. The floating back
+  // button is up on the mode strip above this, so the bar keeps its full width.
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
     columnGap: 16,
     rowGap: 8,
-    paddingLeft: 56,
+    paddingLeft: 14,
     paddingRight: 14,
-    paddingTop: 7,
-    paddingBottom: 7,
+    paddingTop: 6,
+    paddingBottom: 6,
     borderBottomWidth: StyleSheet.hairlineWidth * 2,
     borderBottomColor: 'rgba(255,255,255,0.12)',
   },
@@ -520,12 +532,15 @@ const styles = StyleSheet.create({
   // Centred, so the object at the far left of the bench and the eye at the far
   // right both stay visible while the box is up. It is out of the way entirely
   // the moment the slider is touched.
+  // The box is the only thing standing between the student and the eye, so it
+  // is kept as short as the words allow: the copy in `steps.js` is written
+  // tight, and the type here is a step down from the app's reading sizes.
   boxWrap: {
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 14,
-    paddingHorizontal: 14,
+    bottom: 10,
+    paddingHorizontal: 12,
     alignItems: 'center',
   },
   boxWrapAside: { alignItems: 'flex-start' },
@@ -533,61 +548,59 @@ const styles = StyleSheet.create({
   boxPortrait: { width: '100%' },
   box: {
     backgroundColor: color.paper,
-    borderRadius: radius.panel,
+    borderRadius: radius.tile,
     borderWidth: StyleSheet.hairlineWidth * 2,
     borderColor: color.hairline,
-    padding: 16,
-    gap: 9,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+    gap: 5,
     ...shadow.raised,
   },
-  boxHead: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
+  boxHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  dot: { width: 5, height: 5, borderRadius: 3 },
   boxEyebrow: {
     fontFamily: font.bold,
-    fontSize: 9.5,
-    letterSpacing: 1.9,
+    fontSize: 8.5,
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
   boxTitle: {
-    fontFamily: font.bold,
-    fontSize: 18.5,
-    lineHeight: 23,
-    letterSpacing: -0.25,
+    fontFamily: font.display,
+    fontSize: 15,
+    lineHeight: 18,
     color: color.ink,
   },
-  boxBody: { fontFamily: font.regular, fontSize: 14.5, lineHeight: 21.5, color: color.inkSoft },
+  boxBody: { fontFamily: font.regular, fontSize: 12, lineHeight: 16.5, color: color.inkSoft },
   boxBodyTight: { color: color.inkBody },
-  boxPrompt: { fontFamily: font.bold, fontSize: 13.5, lineHeight: 19.5, marginTop: 2 },
+  boxPrompt: { fontFamily: font.bold, fontSize: 11.5, lineHeight: 15.5, marginTop: 1 },
 
-  readingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  readingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   readingLabel: {
     fontFamily: font.bold,
-    fontSize: 9.5,
-    letterSpacing: 1.6,
+    fontSize: 8.5,
+    letterSpacing: 1.4,
     textTransform: 'uppercase',
     color: color.inkMuted,
   },
   reading: {
-    fontFamily: font.bold,
-    fontSize: 28,
-    letterSpacing: -0.6,
+    fontFamily: font.displayBold,
+    fontSize: 22,
     color: color.ink,
     fontVariant: ['tabular-nums'],
-    marginTop: 1,
   },
-  recordBtn: { paddingHorizontal: 20, paddingVertical: 11, borderRadius: radius.pill },
-  continueBtn: { alignSelf: 'flex-start', marginTop: 3 },
+  recordBtn: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: radius.pill },
+  continueBtn: { alignSelf: 'flex-start', marginTop: 2 },
   recordLabel: {
-    fontFamily: font.bold,
-    fontSize: 11.5,
-    letterSpacing: 1.4,
+    fontFamily: font.displayBold,
+    fontSize: 11,
+    letterSpacing: 1.1,
     textTransform: 'uppercase',
     color: color.paper,
   },
   nudgeTag: {
     fontFamily: font.bold,
-    fontSize: 9.5,
-    letterSpacing: 1.5,
+    fontSize: 8.5,
+    letterSpacing: 1.3,
     textTransform: 'uppercase',
     color: color.red,
   },

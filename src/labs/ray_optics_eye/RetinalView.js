@@ -143,16 +143,20 @@ function Glyph({ row, dx, dy, opacity }) {
  * hunting, and both benches read it from here so they cannot word it
  * differently.
  */
+/**
+ * The verdict comes back as a catalogue key rather than a sentence — the bench
+ * is bilingual, and the caller holds the `t` that knows which language is on.
+ */
 export function verdictFor(sharpness, sharp, corrected) {
   if (sharp) {
     return {
-      label: corrected ? 'Sharp — corrected' : 'Sharp point',
+      key: corrected ? 'eye.verdict.sharpCorrected' : 'eye.verdict.sharp',
       tone: corrected ? '#7FD6A8' : color.green,
     };
   }
-  if (sharpness > 0.45) return { label: 'Softening', tone: color.amber };
-  if (sharpness > 0.12) return { label: 'Blurred', tone: color.red };
-  return { label: 'Unreadable', tone: color.red };
+  if (sharpness > 0.45) return { key: 'eye.verdict.softening', tone: color.amber };
+  if (sharpness > 0.12) return { key: 'eye.verdict.blurred', tone: color.red };
+  return { key: 'eye.verdict.unreadable', tone: color.red };
 }
 
 function ring(n, phase) {

@@ -1,18 +1,14 @@
 import { Platform } from 'react-native';
 
 /**
- * Screen orientation, wrapped so that a missing native module degrades into
- * "ask the student to turn the phone themselves" rather than a crash.
+ * Screen orientation, wrapped so that a missing native module degrades into a
+ * no-op rather than a crash.
  *
- * expo-screen-orientation is a native module: it is absent on web, and absent
- * in any client that was built before it was added to the project. Every call
- * here is therefore optional, and `supported` tells the UI which of the two
- * routes it can offer.
- *
- * The app as a whole is portrait. app.json declares `default` so the OS will
- * allow a rotation at all, and App.js locks portrait at startup — the wide
- * benches are the only screens that ever unlock it, and they put it back when
- * they leave.
+ * LabVR is portrait, everywhere, including the benches — they used to ask you
+ * to turn the phone sideways and no longer do. `lockPortrait` is called once at
+ * startup and is the only thing left here; expo-screen-orientation is a native
+ * module absent on web and in any client built before it was added, so the call
+ * is optional by design.
  */
 
 let SO = null;
@@ -23,54 +19,13 @@ try {
   SO = null;
 }
 
-export const supported = !!SO && Platform.OS !== 'web';
+const supported = !!SO && Platform.OS !== 'web';
 
-async function safely(fn) {
-  if (!supported) return false;
-  try {
-    await fn();
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
-/** Turn the screen to landscape and hold it there. */
-export function lockLandscape() {
-  return safely(() => SO.lockAsync(SO.OrientationLock.LANDSCAPE));
-}
-
-/** Back to the app's normal upright self. */
+/** Hold the screen upright. */
 export function lockPortrait() {
-  return safely(() => SO.lockAsync(SO.OrientationLock.PORTRAIT_UP));
-}
-
-/** Let the device decide — used while the student turns the phone by hand. */
-export function unlock() {
-  return safely(() => SO.unlockAsync());
-}
-
-/**
- * Subscribe to rotations. Returns an unsubscribe function, always safe to
- * call. The callback receives true when the screen is landscape.
- */
-export function onOrientationChange(cb) {
-  if (!supported) return () => {};
-  try {
-    const sub = SO.addOrientationChangeListener((event) => {
-      const o = event?.orientationInfo?.orientation;
-      cb(
-        o === SO.Orientation.LANDSCAPE_LEFT || o === SO.Orientation.LANDSCAPE_RIGHT
-      );
-    });
-    return () => {
-      try {
-        sub?.remove?.();
-      } catch (e) {
-        /* the subscription is already gone */
-      }
-    };
-  } catch (e) {
-    return () => {};
-  }
+  if (!supported) return Promise.resolve(false);
+  return SO.lockAsync(SO.OrientationLock.PORTRAIT_UP).then(
+    () => true,
+    () => false
+  );
 }

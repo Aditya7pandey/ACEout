@@ -19,4 +19,5 @@ Every bench ships these five, wherever the experiment can carry them:
 
 The full contract, the shared modules that implement each one, and how to wire
 a new lab in: [src/labs/CLAUDE.md](src/labs/CLAUDE.md).
-`src/labs/incline/` is the reference implementation.
+`src/labs/ray_optics_eye/` is the reference implementation; `src/labs/incline/`
+is the same shape in English and the simpler read.

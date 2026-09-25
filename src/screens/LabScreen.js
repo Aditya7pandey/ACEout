@@ -1,29 +1,45 @@
-import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { Suspense, lazy, useCallback, useState } from 'react';
+import { View, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { Text, useLanguage, hasKey } from '../i18n';
 import { color, font } from '../theme';
 import { Page, BackButton, Rule } from '../components/ui';
 import { getChapters } from '../data/catalog';
-import InclineLab from '../labs/incline/InclineLab';
-import IndicatorsLab from '../labs/indicators/IndicatorsLab';
-import PhDeterminationLab from '../labs/ph_determination/PhDeterminationLab';
-import GravityLaunchLab from '../labs/gravity_launch/GravityLaunchLab';
-import PlantPhysiologyLab from '../labs/plant_physiology/PlantPhysiologyLab';
-import RayOpticsEyeLab from '../labs/ray_optics_eye/RayOpticsEyeLab';
 import { useAppState } from '../store/AppState';
 
+/**
+ * The benches, loaded when one is opened rather than when the app starts.
+ *
+ * These six imports used to be static, and they were the single most expensive
+ * thing about launching the app. Four of the benches reach three.js — through
+ * `ChemistryStage`, `LaunchScene`, `PlantPhysiologyScene3D` and the glassware —
+ * so every cold start parsed and evaluated the whole 3D stack before it could
+ * draw the splash, for a screen the student is at least three taps away from
+ * and may never visit in a session.
+ *
+ * `lazy()` defers the module's *evaluation*, which is the cost that matters
+ * here; on web Metro also splits it into its own chunk. The bench is behind a
+ * navigation push, so the Suspense fallback below is almost never seen — and
+ * when it is, it is a spinner on the screen the student just asked for rather
+ * than a longer wait on the screen before it.
+ */
 const REGISTRY = {
-  'incline-work-energy': InclineLab,
-  'acid-base-indicators': IndicatorsLab,
-  'ph-determination': PhDeterminationLab,
-  'gravity-launch': GravityLaunchLab,
-  'plant-physiology': PlantPhysiologyLab,
-  'eye-defects': RayOpticsEyeLab,
+  'incline-work-energy': lazy(() => import('../labs/incline/InclineLab')),
+  'acid-base-indicators': lazy(() => import('../labs/indicators/IndicatorsLab')),
+  'ph-determination': lazy(() => import('../labs/ph_determination/PhDeterminationLab')),
+  'gravity-launch': lazy(() => import('../labs/gravity_launch/GravityLaunchLab')),
+  'plant-physiology': lazy(() => import('../labs/plant_physiology/PlantPhysiologyLab')),
+  'eye-defects': lazy(() => import('../labs/ray_optics_eye/RayOpticsEyeLab')),
 };
 
 export default function LabScreen({ navigation, route }) {
   const { labId, title, cls, subject, chapterNo } = route.params;
   const Lab = REGISTRY[labId];
   const { completeLab } = useAppState();
+  const { t } = useLanguage();
+
+  // The catalogue is English. A bench that has been translated names itself in
+  // the string catalogue, and the bar prefers that when it is there.
+  const shownTitle = hasKey(`lab.title.${labId}`) ? t(`lab.title.${labId}`) : title;
   const [finished, setFinished] = useState(false);
 
   // A bench can ask for the whole screen. The bar above it is chrome the
@@ -59,14 +75,14 @@ export default function LabScreen({ navigation, route }) {
   );
 
   return (
-    <Page background={color.sand}>
+    <Page background={color.screen}>
       {chrome ? (
         <>
           <View style={styles.bar}>
             <BackButton onPress={() => navigation.goBack()} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.title} numberOfLines={1}>
-                {title}
+                {shownTitle}
               </Text>
             </View>
             <View style={[styles.status, finished && styles.statusDone]}>
@@ -80,14 +96,22 @@ export default function LabScreen({ navigation, route }) {
       ) : null}
 
       {Lab ? (
-        <Lab
-          onChrome={setChrome}
-          onComplete={async (result) => {
-            setFinished(true);
-            const award = await completeLab(labId, result, { title, cls, subject, chapterNo });
-            toResult(award);
-          }}
-        />
+        <Suspense
+          fallback={
+            <View style={styles.loading}>
+              <ActivityIndicator color={color.brandInk} />
+            </View>
+          }
+        >
+          <Lab
+            onChrome={setChrome}
+            onComplete={async (result) => {
+              setFinished(true);
+              const award = await completeLab(labId, result, { title, cls, subject, chapterNo });
+              toResult(award);
+            }}
+          />
+        </Suspense>
       ) : (
         <View style={styles.missing}>
           <Text style={styles.missingText}>
@@ -154,6 +178,7 @@ const styles = StyleSheet.create({
   },
   exitGlyph: { fontSize: 15, color: 'rgba(255,253,248,0.9)', marginTop: -1 },
 
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   missing: { padding: 30 },
   missingText: {
     fontFamily: font.regular,

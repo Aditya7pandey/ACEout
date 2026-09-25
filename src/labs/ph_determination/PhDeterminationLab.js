@@ -1,180 +1,30 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { color, font, type, radius } from '../../theme';
-import {
-  Eyebrow,
-  GoldButton,
-  Annotation,
-  Segmented,
-  withAlpha,
-} from '../../components/ui';
+import React, { useState, useMemo } from 'react';
 import GuidedFlow from './GuidedFlow';
 import FreePlay from './FreePlay';
+import LabShell from '../LabShell';
 import { makeErrorProfile, defaultErrorConfig, ERROR_KINDS } from './errors';
-import OrientationGate from '../../components/OrientationGate';
-import { lockPortrait } from '../../utils/orientation';
 
+/** Class 11 Chemistry · pH of different solutions. Opens straight on the bench. */
 export default function PhDeterminationLab({ onComplete }) {
   const [mode, setMode] = useState('guided');
-  const [started, setStarted] = useState(false);
-  const [oriented, setOriented] = useState(false);
   const [errorConfig, setErrorConfig] = useState(defaultErrorConfig());
   const [seed] = useState(() => Math.random());
 
   const profile = useMemo(() => makeErrorProfile(seed), [seed]);
 
-  // Whatever the student chose in the gate, the phone goes back upright when
-  // they leave the bench — the rest of the app is portrait.
-  useEffect(() => () => {
-    lockPortrait();
-  }, []);
-
-  if (!oriented) {
-    return (
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ flexGrow: 1 }}
-        showsVerticalScrollIndicator={false}
-      >
-        <OrientationGate
-          onDone={() => setOriented(true)}
-          tone={color.chemistry}
-          title={'More room for the bench — turn the screen'}
-          body={
-            'This one is a single beaker, so it is not cramped upright the way the other chemistry benches are. What the wide screen buys you here is a taller stage: the beaker, the paper strip and the electrode all render larger, and the telemetry bar stops crowding the meniscus. Portrait is a perfectly good way to run it.'
-          }
-        />
-      </ScrollView>
-    );
-  }
-
-  if (!started) {
-    return (
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.setup}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={{ gap: 10 }}>
-          <Eyebrow tone={color.brass}>Before you begin · NCERT Class 11</Eyebrow>
-          <Text style={type.title}>
-            Determination of the pH of Different Solutions
-          </Text>
-          <Text style={[type.body, { lineHeight: 21 }]}>
-            Measure and compare the pH of acidic, neutral, and alkaline solutions using Universal
-            Indicator Paper strips and a Digital pH Meter equipped with a glass combination
-            electrode. Investigate the logarithmic relationship of [H⁺] and [OH⁻] concentrations
-            governed by Kw = 1.0 × 10⁻¹⁴.
-          </Text>
-        </View>
-
-        <View style={{ gap: 12 }}>
-          <Eyebrow>How do you want to run it</Eyebrow>
-          <Segmented
-            value={mode}
-            onChange={setMode}
-            options={[
-              { value: 'guided', label: 'Guided' },
-              { value: 'free', label: 'Free play' },
-            ]}
-          />
-          <Text style={[type.bodySoft, { lineHeight: 19 }]}>
-            {mode === 'guided'
-              ? 'Five systematic steps: measure 5 benchmark NCERT solutions with pH paper (L.C. 1), calibrate the digital probe, measure high-precision digital pH (L.C. 0.01), and plot pH vs -log[H+].'
-              : 'Interactive workbench with 20+ solutions across NCERT, Biological & Salt Buffer packs, custom solution builder, multi-reagent titration pipettes, live paper color-matching, and digital probe telemetry.'}
-          </Text>
-        </View>
-
-        {mode === 'guided' ? (
-          <View style={{ gap: 12 }}>
-            <Eyebrow>Faults in the apparatus</Eyebrow>
-            <Text style={[type.bodySoft, { lineHeight: 19 }]}>
-              Switch these on to introduce real experimental anomalies like uncalibrated electrode
-              drift or lighting glare.
-            </Text>
-            {Object.values(ERROR_KINDS).map((k) => {
-              const on = errorConfig[k.key];
-              return (
-                <Pressable
-                  key={k.key}
-                  onPress={() => setErrorConfig((c) => ({ ...c, [k.key]: !c[k.key] }))}
-                  style={[styles.fault, on && styles.faultOn]}
-                >
-                  <View style={styles.faultHead}>
-                    <Text style={[styles.faultLabel, on && { color: color.brass }]}>
-                      {k.label}
-                    </Text>
-                    <View style={[styles.switch, on && styles.switchOn]}>
-                      <View style={[styles.knob, on && styles.knobOn]} />
-                    </View>
-                  </View>
-                  <Text style={styles.faultBlurb}>{k.blurb}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        ) : null}
-
-        <Annotation label="Least Count Discipline">
-          Universal Indicator Paper resolves to 1 pH unit. The Digital pH Meter resolves to
-          0.01 pH. Quoting decimal places off paper strips is flagged as a scientific error.
-        </Annotation>
-
-        <GoldButton
-          label={mode === 'guided' ? 'Start the procedure' : 'Open the bench'}
-          onPress={() => setStarted(true)}
-        />
-      </ScrollView>
-    );
-  }
-
-  return mode === 'guided' ? (
-    <GuidedFlow
-      profile={profile}
+  return (
+    <LabShell
+      mode={mode}
+      onMode={setMode}
+      errorKinds={ERROR_KINDS}
       errorConfig={errorConfig}
-      onFinish={onComplete}
-    />
-  ) : (
-    <FreePlay />
+      onErrorConfig={setErrorConfig}
+    >
+      {mode === 'guided' ? (
+        <GuidedFlow profile={profile} errorConfig={errorConfig} onFinish={onComplete} />
+      ) : (
+        <FreePlay />
+      )}
+    </LabShell>
   );
 }
-
-const styles = StyleSheet.create({
-  setup: { padding: 20, paddingBottom: 40, gap: 24 },
-  fault: {
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: color.hairline,
-    borderRadius: radius.tile,
-    padding: 15,
-    gap: 8,
-    backgroundColor: color.paper,
-  },
-  faultOn: {
-    borderColor: withAlpha(color.brass, 0.5),
-    backgroundColor: withAlpha(color.brass, 0.05),
-  },
-  faultHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  faultLabel: { fontFamily: font.bold, fontSize: 14, color: color.inkStrong },
-  faultBlurb: {
-    fontFamily: font.regular,
-    fontSize: 12,
-    lineHeight: 18.5,
-    color: color.inkMuted,
-  },
-  switch: {
-    width: 40,
-    height: 23,
-    borderRadius: 12,
-    backgroundColor: 'rgba(28,24,21,0.12)',
-    padding: 2.5,
-    justifyContent: 'center',
-  },
-  switchOn: { backgroundColor: color.goldBottom },
-  knob: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: color.paper,
-  },
-  knobOn: { alignSelf: 'flex-end' },
-});

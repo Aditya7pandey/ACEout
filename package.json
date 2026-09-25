@@ -4,6 +4,7 @@
   "main": "index.js",
   "dependencies": {
     "@expo-google-fonts/fredoka": "^0.4.1",
+    "@expo-google-fonts/noto-sans-devanagari": "^0.4.1",
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@expo/metro-runtime": "~57.0.16",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -31,7 +32,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "brand": "node scripts/make-brand-assets.js"
   },
   "private": true
 }

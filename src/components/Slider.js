@@ -1,5 +1,6 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, PanResponder } from 'react-native';
+import { View, StyleSheet, PanResponder } from 'react-native';
+import { Text } from '../i18n';
 import { color, font, type } from '../theme';
 
 /**

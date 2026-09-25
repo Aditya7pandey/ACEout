@@ -1,12 +1,9 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-} from 'react-native';
+import { View, Pressable, StyleSheet, ScrollView } from 'react-native';
 import Svg, { Polygon } from 'react-native-svg';
+// Language-aware Text: swaps in a Devanagari face for any string that needs
+// one, and leaves every English label exactly as it was.
+import { Text } from '../i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, type, radius, font, space, bevel, deepen } from '../theme';
 

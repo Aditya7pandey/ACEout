@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput } from 'react-native';
+import { View, StyleSheet, Pressable, TextInput } from 'react-native';
 import { color, font, radius, bevel, space } from '../theme';
 import { Page, PageScroll, GhostButton, Bar, Badge, Stars } from '../components/ui';
 import { confirm } from '../components/confirm';
@@ -9,11 +9,13 @@ import { describeWhen } from '../store/progress';
 import { BOARDS, CLASS_OPTIONS, initialsOf, cleanName, isValidName } from '../store/user';
 import { useAppState } from '../store/AppState';
 import { BADGES, earnedBadges, totalStars, starsFor } from '../store/game';
+import { LANGS, useLanguage, Text } from '../i18n';
 
 /** The trophy shelf: who you are, what you have banked, what you have run. */
 export default function ProfileScreen({ navigation }) {
   const { user, progress, stats, game, level, saveProfile, resetProgress, signOut } =
     useAppState();
+  const { lang, setLang, t } = useLanguage();
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(user?.name || '');
   const [openRow, setOpenRow] = useState(null);
@@ -184,6 +186,22 @@ export default function ProfileScreen({ navigation }) {
               setOpenRow(null);
             }}
           />
+          {/* Only the ray-optics bench is translated so far, and the row says
+              so rather than promising a Hindi app it cannot deliver yet. */}
+          <OptionRow
+            label={t('settings.language')}
+            note={t('settings.language.note')}
+            value={LANGS.find((l) => l.key === lang)?.label || '—'}
+            options={LANGS.map((l) => l.key)}
+            render={(k) => LANGS.find((l) => l.key === k)?.label || k}
+            selected={lang}
+            open={openRow === 'lang'}
+            onToggle={() => setOpenRow(openRow === 'lang' ? null : 'lang')}
+            onPick={(k) => {
+              setLang(k);
+              setOpenRow(null);
+            }}
+          />
         </View>
 
         <View style={{ gap: 10 }}>
@@ -209,11 +227,14 @@ function Tile({ value, label, tone }) {
 }
 
 /** A settings row that expands into chips instead of pushing a picker screen. */
-function OptionRow({ label, value, options, selected, open, onToggle, onPick, render }) {
+function OptionRow({ label, note, value, options, selected, open, onToggle, onPick, render }) {
   return (
     <View>
       <Pressable style={styles.setting} onPress={onToggle}>
-        <Text style={styles.settingLabel}>{label}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.settingLabel}>{label}</Text>
+          {note ? <Text style={styles.settingNote}>{note}</Text> : null}
+        </View>
         <Text style={[styles.settingValue, open && { color: color.blueDeep }]}>{value}</Text>
       </Pressable>
       {open ? (
@@ -347,6 +368,7 @@ const styles = StyleSheet.create({
     borderTopColor: color.hairline,
   },
   settingLabel: { fontFamily: font.medium, fontSize: 14, color: color.inkBody },
+  settingNote: { fontFamily: font.regular, fontSize: 11.5, color: color.inkFaint, marginTop: 2 },
   settingValue: { fontFamily: font.displayBold, fontSize: 13.5, color: color.inkMuted },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 14 },
   chip: {

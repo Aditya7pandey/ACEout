@@ -1,4 +1,4 @@
-// Design tokens for the gamified ACEout
+// Design tokens for the gamified LabVR
 // (design/ACEout Gamified v2.dc.html — "playful path").
 //
 // White paper, chunky bevelled tiles, one saturated colour per meaning:
@@ -67,6 +67,12 @@ export const color = {
   locked: '#E5E1D8',
   lockedDeep: '#C8C1B3',
   lockedInk: '#A39B8D',
+
+  // brand — the teal of the LabVR vortex, kept next to the mark's own
+  // `BRAND` in src/brand/logoGeometry.js. Wordmark and chrome only; the
+  // subject colours above still carry meaning and are not this.
+  brandInk: '#1B6B85',
+  brandDeep: '#14536A',
 
   // lines
   hairline: '#EFEAE0',

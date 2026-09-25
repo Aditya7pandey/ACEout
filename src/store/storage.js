@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
- * Everything ACEout knows about a student lives on the device. There are no
+ * Everything LabVR knows about a student lives on the device. There are no
  * network calls anywhere in the app — the labs are meant to run in a classroom
  * with no connection — so AsyncStorage is the whole backend.
  *
@@ -14,6 +14,7 @@ export const KEYS = {
   progress: 'aceout.progress.v2',
   legacyProgress: 'aceout.progress.v1',
   game: 'aceout.game.v1',
+  lang: 'aceout.lang.v1',
 };
 
 export async function readJSON(key, fallback) {

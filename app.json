@@ -3,11 +3,11 @@
     "name": "ACEout",
     "slug": "aceout-virtual-labs",
     "version": "1.0.0",
-    "orientation": "default",
+    "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "backgroundColor": "#FBF7F0",
-    "primaryColor": "#96662F",
+    "backgroundColor": "#FFFFFF",
+    "primaryColor": "#4B7BE5",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aceout.virtuallabs"
@@ -29,7 +29,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FBF7F0",
+          "backgroundColor": "#FFFFFF",
           "image": "./assets/splash-icon.png",
           "imageWidth": 160
         }

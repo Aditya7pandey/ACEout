@@ -1,4 +1,4 @@
-# ACEout — 3D Virtual Labs
+# LabVR — 3D Virtual Labs
 
 Offline NCERT virtual laboratories for Classes 8–12. React Native (Expo SDK 57),
 three.js via `@react-three/fiber` for the benches, `react-native-svg` for the
@@ -21,7 +21,7 @@ Scan the QR with Expo Go, or `npx expo run:android` for a standalone build
 
 | Path | What it is |
 | --- | --- |
-| `src/theme.js` | Design tokens taken from the ACEout prototype |
+| `src/theme.js` | Design tokens taken from the original prototype |
 | `src/components/` | Shared UI — buttons, rules, panels, slider, tab bar |
 | `src/data/catalog.js` | Class → subject → NCERT chapter → lab tree |
 | `src/screens/` | Splash, Classes, Subjects, Chapters, Labs, Lab, Search, Profile |

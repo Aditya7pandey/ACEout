@@ -57,6 +57,44 @@ export function accelerationDown(params) {
 }
 
 /**
+ * What the guided bench actually needs, which is much less than the free-play
+ * integrator below.
+ *
+ * A block released from rest on a uniform slope has a *constant* acceleration,
+ * so there is nothing to integrate: x = ½at² is exact. The run is drawn from
+ * the closed form and the time at the gate is solved for directly, which means
+ * the number the clock stops on is the true one rather than the accumulation of
+ * a few hundred Euler steps.
+ */
+export function runToGate({ thetaDeg, surface, g = G_EARTH, sM }) {
+  const s = SURFACES[surface] || SURFACES.wood;
+  const th = thetaDeg * DEG;
+  const slides = Math.tan(th) > s.muS + 1e-12;
+  const a = g * (Math.sin(th) - s.muK * Math.cos(th));
+  if (!slides || a <= 0) return { slides: false, a: 0, t: Infinity };
+  return { slides: true, a, t: Math.sqrt((2 * sM) / a) };
+}
+
+/** Where the block has got to, t simulated seconds after release. */
+export function positionAt(a, tSec) {
+  return 0.5 * a * tSec * tSec;
+}
+
+/**
+ * The two numbers the student's own timing buys them.
+ *
+ * From rest over a measured distance, a = 2s/t². Put that into
+ * a = g(sin θ − μ cos θ) and rearrange, and the coefficient of kinetic friction
+ * drops out — with no mass in it, which is the point the report makes.
+ */
+export function analyseRun({ thetaDeg, sM, tS, g = G_EARTH }) {
+  const th = thetaDeg * DEG;
+  const a = (2 * sM) / (tS * tS);
+  const mu = (g * Math.sin(th) - a) / (g * Math.cos(th));
+  return { a, mu };
+}
+
+/**
  * Acceleration for the current state, handling both directions of travel and
  * the stuck-at-rest case. This is what the live simulation integrates.
  */

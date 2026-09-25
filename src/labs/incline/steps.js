@@ -1,78 +1,84 @@
 /**
- * The guided procedure.
+ * The two runs of the bench, and every word the instruction box says.
  *
- * Every step validates the *action* — that the student read the instrument
- * correctly — and never the truth. If a worn scale is lying to them, a
- * correctly-read wrong number is accepted, carried into the table, and shows
- * up later as a discrepancy they have to explain. That is how a practical works.
+ * This bench is English-only, so unlike `ray_optics_eye/steps.js` its copy
+ * lives here rather than in the string catalogue. If it is ever translated,
+ * move these strings to `src/i18n/strings.js` under `incline.<key>.<beat>` and
+ * leave this file holding only what a run *is* — that is the pattern the eye
+ * bench follows and the one `src/labs/CLAUDE.md` asks for.
+ *
+ * Each run plays the same four beats:
+ *
+ *   brief    the box that opens the run; it goes the moment they touch anything
+ *   setup    the sliders are live and the block is waiting at the mark
+ *   running  the block is on its way down and the gate clock is counting
+ *   record   the gate has caught it; the time is on screen, waiting to be banked
+ *
+ * None of these strings may contain the answer. The student sets the slope,
+ * the mass and the gate, and the only number they take away is a time.
  */
 
-export const TRIAL_TARGETS_CM = [25, 35, 45, 55, 65];
-export const REPEATS_PER_TRIAL = 2;
+import { color } from '../../theme';
 
-export const STEPS = [
+/** The ramp itself, in metres. Fixed — the slope angle is what varies. */
+export const RAMP_LENGTH_M = 1.0;
+
+/**
+ * The slider ranges.
+ *
+ * The angle floor is 20°, not lower, and that is a deliberate piece of kindness:
+ * varnished wood holds until tan θ passes its coefficient of static friction
+ * (0.32, so 17.7°). Starting the slider above that means neither surface can
+ * ever be set to an angle where the block simply refuses to move and the run
+ * dead-ends. Free play has no such floor — going and finding the angle where it
+ * sticks is exactly what that mode is for.
+ */
+export const ANGLE = { min: 20, max: 40, step: 1 };
+export const MASS = { min: 0.2, max: 1.0, step: 0.05 };
+export const TRACK_CM = { min: 20, max: 70, step: 1 };
+
+/**
+ * The bench runs in slow motion so a half-second slide is watchable. The clock
+ * counts *simulated* seconds — the number the student records is the real time
+ * the run would take, not the time they sat watching it.
+ */
+export const SLOW_MO = 3;
+
+export const STATIONS = [
   {
-    id: 'mass',
-    kind: 'mass',
-    title: 'Find the mass of the block',
-    instruction:
-      'Place the block on the pan and read the display. Copy it exactly as it reads — sign and all.',
-    note: 'Least count 1 g, so quote the mass as a whole number of grams.',
+    key: 'wood',
+    surface: 'wood',
+    ordinal: 'Run one',
+    name: 'Varnished wood',
+    tone: color.physics,
+    home: { thetaDeg: 28, massKg: 0.5, trackCm: 50 },
+    brief:
+      'A block, a slope, and a gate part-way down. You choose how steep the slope is, how heavy the block is and how far it has to travel — then let go and time it to the gate.',
+    prompt: 'Drag the three sliders below, then release the block.',
+    record:
+      'That time is the whole measurement. It tells you the acceleration, and the acceleration tells you how much friction this surface has.',
   },
   {
-    id: 'geometry',
-    kind: 'geometry',
-    title: 'Measure the slope — do not ask it for its angle',
-    instruction:
-      'A protractor against a wooden wedge is a poor measurement. Instead measure the vertical rise of the top corner and the horizontal run of the base with your metre scale, and let trigonometry give you θ.',
-    note:
-      'sin θ = rise ÷ √(rise² + run²). Measuring two lengths well beats reading one angle badly.',
-  },
-  {
-    id: 'trials',
-    kind: 'trials',
-    title: 'Run the block and time it yourself',
-    instruction:
-      'Slide the finish gate to roughly the distance asked for — the carriage has no scale on it, so measure where it actually ends up. Then release the block and time it from the release mark to the gate. Two runs at each distance.',
-    note:
-      'You are the timing instrument here. Watch the block, not the watch. Start as it breaks away, stop as its leading face reaches the gate.',
-  },
-  {
-    id: 'graph',
-    kind: 'graph',
-    title: 'Plot your own points',
-    instruction:
-      'For a release from rest with uniform acceleration, s = ½at², so v = 2s/t and v² = 2as. Plot v² against s. If your readings are sound the points will lie on a straight line through the origin, and its gradient is 2a.',
-    note:
-      'Four points can be fitted by almost anything. Five points that fall on a line are an argument.',
-  },
-  {
-    id: 'accel',
-    kind: 'accel',
-    title: 'Read the acceleration off the gradient',
-    instruction:
-      'Take the gradient of your best-fit line and halve it to get the acceleration. Then work backwards: a = g(sin θ − μ cos θ) gives you the coefficient of kinetic friction of the surface you just ran on.',
-    note:
-      'Quote both answers to the number of significant figures your weakest reading justifies — no more.',
-  },
-  {
-    id: 'work',
-    kind: 'work',
-    title: 'Audit the energy for your longest run',
-    instruction:
-      'Now test the work–energy theorem on a single trial. Work out the work gravity did, the work friction took away, and the kinetic energy the block finished with. The theorem says the first two must add up to the third.',
-    note:
-      'W_gravity = mgs sin θ.  W_friction = −μmgs cos θ.  K = ½mv², with v = 2s/t.',
-  },
-  {
-    id: 'report',
-    kind: 'report',
-    title: 'What your data actually showed',
-    instruction: '',
-    note: '',
+    key: 'glass',
+    surface: 'glass',
+    ordinal: 'Run two',
+    name: 'Glass sheet',
+    tone: color.green,
+    home: { thetaDeg: 28, massKg: 0.5, trackCm: 50 },
+    brief:
+      'Same block, same gate, different running surface — the wood is swapped for glass. Set it up again and see what the change of surface does to the clock.',
+    prompt: 'Set it up again and release.',
+    record:
+      'Two surfaces, two times. Bank this one and the bench will turn both into a coefficient of friction.',
   },
 ];
 
-export function stepById(id) {
-  return STEPS.find((s) => s.id === id);
-}
+/** The opening dialog, shown once, over the first run. */
+export const INTRO = {
+  title: 'Block on a slope',
+  body:
+    'Everything on this bench is yours to set: the angle of the incline, the mass of the block and how far the gate sits down the track. Release the block, read the gate clock, and do it twice — once on wood, once on glass.',
+  hint: 'Tap anywhere to begin',
+};
+
+export const BEATS = ['brief', 'setup', 'running', 'record', 'done'];

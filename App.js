@@ -22,6 +22,7 @@ import {
 import { color } from './src/theme';
 import { lockPortrait } from './src/utils/orientation';
 import { AppStateProvider, useAppState } from './src/store/AppState';
+import { LanguageProvider } from './src/i18n';
 import SplashScreen from './src/screens/SplashScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import SubjectsScreen from './src/screens/SubjectsScreen';
@@ -45,13 +46,27 @@ const navTheme = {
 export default function App() {
   return (
     <AppStateProvider>
-      <Root />
+      <LanguageProvider>
+        <Root />
+      </LanguageProvider>
     </AppStateProvider>
   );
 }
 
 function Root() {
   const { ready, user } = useAppState();
+
+  /**
+   * Only the faces the first screen actually needs are allowed to hold up the
+   * launch.
+   *
+   * The four Devanagari weights used to be in here, and they are ~876 KB of the
+   * ~1.5 MB this call had to register before the app could draw anything —
+   * more than half the font cost, for a script that only appears if the student
+   * switches the ray-optics bench to Hindi. They now load from
+   * `LanguageProvider` the moment the language becomes `hi`, and the system
+   * Devanagari face covers the gap in the meantime.
+   */
   const [fontsLoaded] = useFonts({
     PlusJakartaSans_400Regular,
     PlusJakartaSans_500Medium,

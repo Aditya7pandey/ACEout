@@ -1,5 +1,5 @@
 // Error injection models for Plant Physiology experiments
-// Conforming to ACEout Lab Contract (Section 5: Error injection)
+// Conforming to LabVR Lab Contract (Section 5: Error injection)
 
 export const ERROR_KINDS = {
   air_bubbles: {

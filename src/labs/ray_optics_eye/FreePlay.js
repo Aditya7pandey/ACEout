@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { color, font } from '../../theme';
+import { Text, useLanguage } from '../../i18n';
 import Slider from '../../components/Slider';
 import EyeScene from './EyeScene';
 import RetinalView, { verdictFor } from './RetinalView';
@@ -57,6 +58,7 @@ const BENCH = { key: 'free', tone: color.physics };
 const IRIS = ['#9CBFD4', '#3C617A'];
 
 export default function FreePlay() {
+  const { t } = useLanguage();
   const [frame, setFrame] = useState({ w: 0, h: 0 });
   const [objectCm, setObjectCm] = useState(50);
   const [axialMm, setAxialMm] = useState(RETINA_CM * 10);
@@ -94,9 +96,9 @@ export default function FreePlay() {
 
         <View style={styles.readoutBody}>
           <View style={styles.verdictRow}>
-            <Text style={styles.eyebrow}>Retinal image</Text>
+            <Text style={styles.eyebrow}>{t('eye.meter.title')}</Text>
             <Text style={[styles.verdict, { color: verdict.tone }]} numberOfLines={1}>
-              {verdict.label}
+              {t(verdict.key)}
             </Text>
             <Text style={styles.blur}>{(focus.blurCm * 10).toFixed(2)} mm</Text>
           </View>
@@ -114,19 +116,21 @@ export default function FreePlay() {
           </View>
 
           <View style={styles.statsRow}>
-            <Stat label="Eyeball" value={defect.name} />
+            <Stat label={t('eye.free.eyeball')} value={t(`eye.diagnosis.${defect.key}`)} />
             <Stat
-              label={lens ? 'Range, wearing it' : 'Range, bare'}
-              value={`far ${fmtRange(range.farCm)} · near ${fmtRange(range.nearCm)}`}
+              label={t(lens ? 'eye.free.rangeWearing' : 'eye.free.rangeBare')}
+              value={`${t('eye.free.far')} ${fmtRange(range.farCm)} · ${t(
+                'eye.free.near'
+              )} ${fmtRange(range.nearCm)}`}
             />
           </View>
 
           <Text style={styles.note} numberOfLines={1}>
             {focus.straining
-              ? 'Lens at full accommodation — nothing left to give'
+              ? t('eye.free.straining')
               : focus.effort < 0.02
-              ? 'Lens fully relaxed'
-              : `Lens accommodating · ${Math.round(focus.effort * 100)}% of its range`}
+              ? t('eye.free.relaxed')
+              : t('eye.free.accommodating', { pct: Math.round(focus.effort * 100) })}
           </Text>
         </View>
       </View>
@@ -160,9 +164,9 @@ export default function FreePlay() {
           step={0.1}
           onChange={setObjectCm}
           tone={color.brass}
-          label="Object distance"
+          label={t('eye.free.objectDistance')}
           display={`${objectCm.toFixed(1)} cm`}
-          marks={[{ value: 25, label: 'reading', color: color.edge }]}
+          marks={[{ value: 25, label: t('eye.free.mark.reading'), color: color.edge }]}
         />
         <Slider
           style={styles.slider}
@@ -172,9 +176,9 @@ export default function FreePlay() {
           step={0.1}
           onChange={setAxialMm}
           tone={color.physics}
-          label="Eyeball · lens to retina"
+          label={t('eye.free.axial')}
           display={`${axialMm.toFixed(1)} mm`}
-          marks={[{ value: RETINA_CM * 10, label: 'normal', color: color.edge }]}
+          marks={[{ value: RETINA_CM * 10, label: t('eye.free.mark.normal'), color: color.edge }]}
         />
         <Slider
           style={styles.slider}
@@ -184,10 +188,10 @@ export default function FreePlay() {
           step={POWER_STEP_D}
           onChange={setSpecD}
           tone={color.biology}
-          label="Corrective power"
+          label={t('eye.free.power')}
           display={`${fmtSigned(specD)} D`}
           marks={[
-            { value: 0, label: 'none', color: color.edge },
+            { value: 0, label: t('eye.free.mark.none'), color: color.edge },
             // Where the prescription for *this* eyeball sits. A tick, not a
             // number: the acuity card is still what tells them they are on it.
             ...(Math.abs(idealSpecD(retinaCm)) > POWER_STEP_D / 2 &&

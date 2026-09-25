@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
+import { Text, useLanguage } from '../i18n';
 import { color, font, radius } from '../theme';
 import { Eyebrow } from '../components/ui';
 
@@ -8,13 +9,15 @@ import { Eyebrow } from '../components/ui';
  * right, separated by a rule so it is always obvious which numbers were
  * measured and which were calculated.
  */
-export default function DataTable({ columns, rows, title = 'Observation table', caption }) {
+export default function DataTable({ columns, rows, title, caption }) {
+  const { t } = useLanguage();
+  const heading = title || t('table.title');
   return (
     <View style={styles.wrap}>
       <View style={styles.head}>
-        <Eyebrow>{title}</Eyebrow>
+        <Eyebrow>{heading}</Eyebrow>
         <Text style={styles.count}>
-          {rows.length} {rows.length === 1 ? 'reading' : 'readings'}
+          {rows.length} {t(rows.length === 1 ? 'table.reading' : 'table.readings')}
         </Text>
       </View>
 
@@ -41,7 +44,7 @@ export default function DataTable({ columns, rows, title = 'Observation table', 
 
           {rows.length === 0 ? (
             <View style={styles.emptyRow}>
-              <Text style={styles.empty}>No readings recorded yet.</Text>
+              <Text style={styles.empty}>{t('table.empty')}</Text>
             </View>
           ) : (
             rows.map((r, i) => (

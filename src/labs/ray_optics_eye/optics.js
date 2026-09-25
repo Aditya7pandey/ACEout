@@ -214,13 +214,11 @@ export function focusFor(eye, uCm) {
  */
 export function diagnose(retinaCm) {
   const { farCm, nearCm } = limitsFor(retinaCm);
-  if (Number.isFinite(farCm)) {
-    return { key: 'myopia', name: 'Myopia — eyeball too long', farCm, nearCm };
-  }
-  if (nearCm > NORMAL_NEAR_CM + 0.5) {
-    return { key: 'hypermetropia', name: 'Hypermetropia — eyeball too short', farCm, nearCm };
-  }
-  return { key: 'normal', name: 'Emmetropia — normal', farCm, nearCm };
+  // `key` only — the name the panel prints comes from the catalogue, keyed
+  // `eye.diagnosis.<key>`.
+  if (Number.isFinite(farCm)) return { key: 'myopia', farCm, nearCm };
+  if (nearCm > NORMAL_NEAR_CM + 0.5) return { key: 'hypermetropia', farCm, nearCm };
+  return { key: 'normal', farCm, nearCm };
 }
 
 /**
@@ -255,12 +253,19 @@ export function checkReading(station, readingCm) {
   // things at the two kinds of station.
   const tooSharp = station.limit === 'near' ? delta > 0 : delta < 0;
 
+  // The hint comes back as catalogue keys rather than a sentence: the bench is
+  // bilingual and this module has no business knowing which language is on.
   return {
     ok: false,
     tooSharp,
-    hint: tooSharp
-      ? `Still crisp on the retina. Keep going ${station.direction === 'in' ? 'closer' : 'further out'} until the edges soften.`
-      : `Gone past it — the retina has a disc, not a point. Come back ${station.direction === 'in' ? 'out' : 'in'} until it sharpens, and stop there.`,
+    hintKey: tooSharp ? 'eye.nudge.short' : 'eye.nudge.past',
+    dirKey: tooSharp
+      ? station.direction === 'in'
+        ? 'eye.dir.closer'
+        : 'eye.dir.further'
+      : station.direction === 'in'
+      ? 'eye.dir.out'
+      : 'eye.dir.in',
   };
 }
 
@@ -279,34 +284,16 @@ export const NORMAL_NEAR_CM = 25;
 export function correctionFor(station, readingCm) {
   if (station.eyeKey === 'myopia') {
     const fCm = -readingCm;
-    return {
-      kind: 'concave',
-      lens: 'Concave (diverging)',
-      fCm,
-      powerD: 100 / fCm,
-      working: `f = −(far point) = −${fmt(readingCm)} cm   →   P = 100 ÷ (−${fmt(readingCm)}) = ${fmtSigned(100 / fCm)} D`,
-    };
+    return { kind: 'concave', lensKey: 'eye.lens.concave', fCm, powerD: 100 / fCm };
   }
 
   if (station.eyeKey === 'hypermetropia') {
     const invF = 1 / NORMAL_NEAR_CM - 1 / readingCm;
     const fCm = 1 / invF;
-    return {
-      kind: 'convex',
-      lens: 'Convex (converging)',
-      fCm,
-      powerD: 100 / fCm,
-      working: `1/f = 1/${NORMAL_NEAR_CM} − 1/${fmt(readingCm)}   →   f = ${fmt(fCm)} cm   →   P = ${fmtSigned(100 / fCm)} D`,
-    };
+    return { kind: 'convex', lensKey: 'eye.lens.convex', fCm, powerD: 100 / fCm };
   }
 
-  return {
-    kind: 'none',
-    lens: 'None needed',
-    fCm: Infinity,
-    powerD: 0,
-    working: 'The near point is where it should be and distant objects are already sharp. Nothing to correct.',
-  };
+  return { kind: 'none', lensKey: 'eye.lens.none', fCm: Infinity, powerD: 0 };
 }
 
 // --- little helpers -------------------------------------------------------
