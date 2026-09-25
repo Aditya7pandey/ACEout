@@ -18,10 +18,12 @@ import { INSTRUMENTS, sigFigsForReading } from '../../measure/leastCount';
 
 const BENCH = INSTRUMENTS.metreScale; // least count 0.1 cm
 
-// The acuity card in the meter. Its aspect follows RetinalView's own viewBox,
-// so the letters keep their proportions whatever the panel is sized to.
-const METER_W = 172;
-const POV_W = METER_W - 24; // the panel's horizontal padding
+// The acuity card in the meter, laid on its side next to the readings rather
+// than stacked above them. Its aspect follows RetinalView's own viewBox, so the
+// letters keep their proportions whatever the bar is sized to.
+// Kept deliberately small: the card is the tallest thing in the bar, and every
+// pixel the bar takes comes off the bench on a short landscape phone.
+const POV_W = 100;
 const POV_H = Math.round((POV_W * 120) / 208);
 
 /**
@@ -199,6 +201,30 @@ export default function GuidedFlow({ onFinish }) {
 
   return (
     <View style={styles.wrap}>
+      {/* Progress and the retinal readout share one bar above the bench. Both
+          used to float over the scene, and the meter floated over exactly the
+          corner the eye is drawn in — it covered the eyeball in portrait and
+          clipped it in landscape. In flow, neither can reach the drawing. */}
+      <View style={styles.topBar}>
+        <View style={styles.pips}>
+          {STATIONS.map((s, i) => (
+            <View
+              key={s.key}
+              style={[
+                styles.pip,
+                i === idx && { backgroundColor: s.tone, width: 22 },
+                i < idx && { backgroundColor: withAlpha(color.paper, 0.55) },
+              ]}
+            />
+          ))}
+          <Text style={styles.pipLabel} numberOfLines={1}>
+            {station.ordinal} · {station.name}
+          </Text>
+        </View>
+
+        <SharpnessMeter focus={shownFocus} corrected={wearing} clinical={station.clinical} />
+      </View>
+
       <View
         style={styles.stage}
         onLayout={(e) =>
@@ -227,26 +253,6 @@ export default function GuidedFlow({ onFinish }) {
           ))}
         </Animated.View>
       ) : null}
-
-      {/* ---- station progress, top left ---- */}
-      <View style={styles.pips} pointerEvents="none">
-        {STATIONS.map((s, i) => (
-          <View
-            key={s.key}
-            style={[
-              styles.pip,
-              i === idx && { backgroundColor: s.tone, width: 22 },
-              i < idx && { backgroundColor: withAlpha(color.paper, 0.55) },
-            ]}
-          />
-        ))}
-        <Text style={styles.pipLabel} numberOfLines={1}>
-          {station.ordinal} · {station.name}
-        </Text>
-      </View>
-
-      {/* ---- what the retina is receiving, top right ---- */}
-      <SharpnessMeter focus={shownFocus} corrected={wearing} clinical={station.clinical} />
 
       {/* ---- the instruction box ---- */}
       {/* Centred while they work, but pushed aside for the correction beat —
@@ -369,37 +375,40 @@ function SharpnessMeter({ focus, corrected, clinical }) {
 
   return (
     <View style={styles.meter} pointerEvents="none">
-      <Text style={styles.meterEyebrow}>Retinal image</Text>
-      <Text style={styles.meterClinical} numberOfLines={1}>
-        {clinical}
-      </Text>
       <View style={styles.pov}>
         <RetinalView sharpness={sharpness} width={POV_W} height={POV_H} />
       </View>
-      <View style={styles.meterRow}>
-        <Text style={[styles.meterValue, { color: verdict.tone }]} numberOfLines={1}>
-          {verdict.label}
+
+      <View style={styles.meterBody}>
+        <View style={styles.meterRow}>
+          <Text style={styles.meterEyebrow}>Retinal image</Text>
+          <Text style={[styles.meterValue, { color: verdict.tone }]} numberOfLines={1}>
+            {verdict.label}
+          </Text>
+          {/* The blur circle in millimetres, to the two decimals a prescription
+              is written to. It reads 0.00 for the last stretch before the limit,
+              so it describes the image without handing over the distance. */}
+          <Text style={styles.meterBlur}>{(blurCm * 10).toFixed(2)} mm</Text>
+        </View>
+
+        <View style={styles.meterTrack}>
+          <View
+            style={[
+              styles.meterFill,
+              { width: `${Math.round(sharpness * 100)}%`, backgroundColor: verdict.tone },
+            ]}
+          />
+        </View>
+
+        <Text style={styles.meterNote} numberOfLines={1}>
+          {clinical} ·{' '}
+          {corrected
+            ? 'spectacle lens doing the work'
+            : straining
+            ? 'lens at full accommodation'
+            : 'lens relaxed within range'}
         </Text>
-        {/* The blur circle in millimetres, to the two decimals a prescription
-            is written to. It reads 0.00 for the last stretch before the limit,
-            so it describes the image without handing over the distance. */}
-        <Text style={styles.meterBlur}>{(blurCm * 10).toFixed(2)} mm</Text>
       </View>
-      <View style={styles.meterTrack}>
-        <View
-          style={[
-            styles.meterFill,
-            { width: `${Math.round(sharpness * 100)}%`, backgroundColor: verdict.tone },
-          ]}
-        />
-      </View>
-      <Text style={styles.meterNote}>
-        {corrected
-          ? 'Spectacle lens doing the work'
-          : straining
-          ? 'Lens at full accommodation'
-          : 'Lens relaxed within range'}
-      </Text>
     </View>
   );
 }
@@ -414,16 +423,32 @@ const styles = StyleSheet.create({
   stage: { flex: 1, overflow: 'hidden' },
   track: { position: 'absolute', top: 0, left: 0, bottom: 0, flexDirection: 'row' },
 
-  // Kept clear of the meter in the top right, and of the screen's floating
-  // back button in the top left, which the bench hides its own title bar for.
+  // Progress on the left, retinal readout on the right. They sit side by side
+  // when there is room and stack on a narrow portrait phone. The left padding
+  // clears the screen's floating back button, which the bench hides its own
+  // title bar for.
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    columnGap: 16,
+    rowGap: 8,
+    paddingLeft: 56,
+    paddingRight: 14,
+    paddingTop: 7,
+    paddingBottom: 7,
+    borderBottomWidth: StyleSheet.hairlineWidth * 2,
+    borderBottomColor: 'rgba(255,255,255,0.12)',
+  },
+
   pips: {
-    position: 'absolute',
-    top: 16,
-    left: 56,
-    right: METER_W + 28,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 150,
+    minWidth: 0,
   },
   pip: {
     width: 8,
@@ -442,18 +467,15 @@ const styles = StyleSheet.create({
   },
 
   meter: {
-    position: 'absolute',
-    top: 12,
-    right: 16,
-    width: METER_W,
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: radius.chip,
-    backgroundColor: 'rgba(16,21,29,0.72)',
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: 'rgba(255,255,255,0.14)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 260,
+    minWidth: 0,
   },
+  meterBody: { flex: 1, minWidth: 0, gap: 3 },
   meterEyebrow: {
     fontFamily: font.bold,
     fontSize: 8.5,
@@ -461,25 +483,16 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: 'rgba(255,253,248,0.5)',
   },
-  meterClinical: {
-    fontFamily: font.medium,
-    fontSize: 10,
-    color: 'rgba(255,253,248,0.72)',
-    marginTop: -1,
-  },
   pov: {
     width: POV_W,
     height: POV_H,
     borderRadius: 7,
     overflow: 'hidden',
-    marginTop: 3,
   },
   meterRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: 6,
-    marginTop: 2,
+    gap: 8,
   },
   meterValue: { fontFamily: font.bold, fontSize: 13, letterSpacing: -0.1, flexShrink: 1 },
   meterBlur: {
@@ -487,6 +500,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: 'rgba(255,253,248,0.55)',
     fontVariant: ['tabular-nums'],
+    marginLeft: 'auto',
   },
   meterTrack: {
     height: 3,

@@ -1,90 +1,95 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { color, font, type, radius, space } from '../theme';
-import { Page, PageScroll, Eyebrow, withAlpha } from '../components/ui';
+import { color, font, radius, bevel, deepen } from '../theme';
+import { Page, PageScroll, Eyebrow, Bar } from '../components/ui';
 import TabBar from '../components/TabBar';
-import { SUBJECTS, CLASSES } from '../data/catalog';
+import Hud from '../components/Hud';
+import { SUBJECTS, findLabMeta, SEARCH_INDEX } from '../data/catalog';
 import { useAppState } from '../store/AppState';
-import { initialsOf, firstNameOf } from '../store/user';
 
 /**
- * The home of the Learn tab. The class is no longer picked here — it comes
- * from the student's profile and is changed in the You tab — so this screen
- * opens straight on the four disciplines.
+ * The Learn tab: your level, what you were last on, and the four worlds.
+ * Everything that used to be a sentence here is now a number.
  */
 export default function SubjectsScreen({ navigation }) {
-  const { user, stats } = useAppState();
+  const { user, stats, level, progress } = useAppState();
   const cls = user?.cls || '11';
-  const first = firstNameOf(user?.name);
-  const clsMeta = CLASSES.find((c) => c.num === cls);
+  const next = nextBench(progress, cls);
 
   return (
     <Page>
-      <View style={styles.header}>
-        <View style={styles.headRow}>
-          <View style={{ gap: 7, flex: 1 }}>
-            <Eyebrow numberOfLines={1}>
-              {greeting()}
-              {first ? `, ${first}` : ''}
-            </Eyebrow>
-            <Text style={type.display}>
-              Class {cls} · four <Text style={{ color: color.brass }}>disciplines</Text>
-            </Text>
+      <Hud navigation={navigation} />
+
+      <PageScroll contentStyle={{ gap: 18, paddingTop: 16 }}>
+        <View style={styles.levelCard}>
+          <View style={styles.levelTop}>
+            <Text style={styles.rank}>{level.rank}</Text>
+            <Text style={styles.levelXp}>{level.toNext} XP to go</Text>
           </View>
-          <Pressable style={styles.avatar} onPress={() => navigation.navigate('Profile')}>
-            <Text style={styles.avatarText}>{initialsOf(user?.name)}</Text>
-          </Pressable>
+          <Text style={styles.levelNum}>Level {level.level}</Text>
+          <Bar value={level.fraction} tone={color.goldTop} track="rgba(0,0,0,0.22)" height={14} />
         </View>
 
-        <Pressable style={styles.classLine} onPress={() => navigation.navigate('Profile')}>
-          <Text style={styles.classLineText}>
-            {clsMeta ? `${clsMeta.labs} labs · ` : ''}
-            {stats.labsDone > 0
-              ? `${stats.labsDone} logged${stats.streak > 1 ? ` · ${stats.streak}-day streak` : ''}`
-              : 'Not your class? Change it in You'}
-          </Text>
-        </Pressable>
+        {next ? (
+          <Pressable
+            style={({ pressed }) => [styles.next, pressed && styles.pressed]}
+            onPress={() =>
+              navigation.navigate('Lab', {
+                labId: next.id,
+                title: next.title,
+                cls: next.cls,
+                subject: next.subject,
+                chapterNo: next.chapterNo,
+              })
+            }
+          >
+            <View style={{ flex: 1, gap: 4 }}>
+              <Eyebrow tone={color.greenDeep}>{next.resume ? 'Resume' : 'Start here'}</Eyebrow>
+              <Text style={styles.nextTitle} numberOfLines={2}>
+                {next.title}
+              </Text>
+            </View>
+            <View style={styles.play}>
+              <Text style={styles.playGlyph}>▶</Text>
+            </View>
+          </Pressable>
+        ) : null}
 
-        <Pressable style={styles.search} onPress={() => navigation.navigate('Search')}>
-          <View style={styles.searchDot} />
-          <Text style={styles.searchText}>Search labs, chapters, concepts</Text>
-        </Pressable>
-      </View>
+        <Eyebrow style={{ marginTop: 2 }}>Worlds · Class {cls}</Eyebrow>
 
-      <PageScroll contentStyle={{ gap: 11 }}>
-        {SUBJECTS.map((s) => {
-          const done = stats.bySubject[s.key] || 0;
-          return (
-            <Pressable
-              key={s.key}
-              onPress={() => navigation.navigate('Chapters', { cls, subject: s.key })}
-              style={({ pressed }) => [
-                styles.card,
-                pressed && { borderColor: 'rgba(28,24,21,0.24)' },
-              ]}
-            >
-              <View style={[styles.spine, { backgroundColor: s.accent }]} />
-              <View
-                style={[
-                  styles.badge,
-                  {
-                    borderColor: withAlpha(s.accent, 0.35),
-                    backgroundColor: withAlpha(s.accent, 0.07),
-                  },
+        <View style={styles.grid}>
+          {SUBJECTS.map((s) => {
+            const done = stats.bySubject[s.key] || 0;
+            return (
+              <Pressable
+                key={s.key}
+                onPress={() => navigation.navigate('Chapters', { cls, subject: s.key })}
+                style={({ pressed }) => [
+                  styles.world,
+                  { backgroundColor: s.accent },
+                  bevel(deepen[s.accent] || color.inkStrong),
+                  pressed && styles.pressed,
                 ]}
               >
-                <Text style={[styles.mark, { color: s.accent }]}>{s.mark}</Text>
-              </View>
-              <View style={{ flex: 1, gap: 5 }}>
-                <Text style={styles.name}>{s.name}</Text>
-                <Text style={styles.blurb}>{s.blurb}</Text>
-                <Text style={[styles.meta, { color: s.accent }]}>
-                  {done > 0 ? `${done} of ${s.totalLabs} done` : s.meta}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        })}
+                <Text style={styles.mark}>{s.mark}</Text>
+                <View style={{ gap: 7 }}>
+                  <Text style={styles.worldName} numberOfLines={1}>
+                    {s.name}
+                  </Text>
+                  <Bar
+                    value={done / s.totalLabs}
+                    tone="#FFFFFF"
+                    track="rgba(255,255,255,0.28)"
+                    height={7}
+                  />
+                  <Text style={styles.worldCount}>
+                    {done} / {s.totalLabs}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
       </PageScroll>
 
       <TabBar navigation={navigation} active="Subjects" />
@@ -92,79 +97,89 @@ export default function SubjectsScreen({ navigation }) {
   );
 }
 
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
+/**
+ * What the big green card points at: the bench you last ran, or — on a fresh
+ * install — the first built bench in your class, so the card is never empty.
+ */
+function nextBench(progress, cls) {
+  const last = (progress?.completions || [])[0];
+  if (last) {
+    const meta = findLabMeta(last.labId);
+    if (meta?.built) return { ...meta, resume: true };
+  }
+  const built = SEARCH_INDEX.filter((l) => l.built);
+  const mine = built.find((l) => l.cls === cls) || built[0];
+  return mine ? { ...mine, resume: false } : null;
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: space.gutter, paddingTop: 16, paddingBottom: 20, gap: 18 },
-  headRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#F2EADC',
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: color.edge,
+  pressed: { transform: [{ translateY: 3 }], borderBottomWidth: 1 },
+
+  levelCard: {
+    borderRadius: radius.card,
+    backgroundColor: color.blue,
+    ...bevel(color.blueDeep),
+    padding: 16,
+    gap: 10,
+  },
+  levelTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  rank: {
+    fontFamily: font.extra,
+    fontSize: 10.5,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.85)',
+  },
+  levelXp: {
+    fontFamily: font.displayBold,
+    fontSize: 12.5,
+    color: 'rgba(255,255,255,0.85)',
+    fontVariant: ['tabular-nums'],
+  },
+  levelNum: { fontFamily: font.displayBold, fontSize: 26, color: '#FFFFFF' },
+
+  next: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    borderRadius: radius.card,
+    backgroundColor: color.greenSoft,
+    borderWidth: 2,
+    borderColor: color.greenEdge,
+    ...bevel(color.greenEdge),
+    padding: 16,
+  },
+  nextTitle: {
+    fontFamily: font.display,
+    fontSize: 18,
+    lineHeight: 22,
+    color: color.greenDeep,
+  },
+  play: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: color.green,
+    ...bevel(color.greenDeep),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontFamily: font.bold, fontSize: 12, letterSpacing: 0.5, color: color.inkSoft },
-  classLine: { marginTop: -8 },
-  classLineText: {
-    fontFamily: font.bold,
-    fontSize: 9.5,
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
-    color: color.brass,
+  playGlyph: { fontSize: 16, color: '#FFFFFF', marginLeft: 2 },
+
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  world: {
+    width: '47.5%',
+    flexGrow: 1,
+    borderRadius: radius.card,
+    padding: 14,
+    gap: 20,
   },
-  search: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-    paddingVertical: 13,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: 'rgba(28,24,21,0.11)',
-    backgroundColor: 'rgba(28,24,21,0.03)',
-  },
-  searchDot: { width: 13, height: 13, borderRadius: 7, borderWidth: 1.4, borderColor: color.inkMuted },
-  searchText: { fontFamily: font.regular, fontSize: 13.5, color: color.inkMuted },
-  card: {
-    position: 'relative',
-    overflow: 'hidden',
-    borderRadius: radius.panel,
-    paddingVertical: 20,
-    paddingLeft: 22,
-    paddingRight: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 18,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: color.hairline,
-    backgroundColor: 'rgba(28,24,21,0.028)',
-  },
-  spine: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 2 },
-  badge: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mark: { fontFamily: font.bold, fontSize: 16, letterSpacing: -0.4 },
-  name: { fontFamily: font.bold, fontSize: 16.5, letterSpacing: -0.17, color: color.inkStrong },
-  blurb: { fontFamily: font.regular, fontSize: 12.5, lineHeight: 19, color: color.inkMuted },
-  meta: {
-    fontFamily: font.bold,
-    fontSize: 9.5,
-    letterSpacing: 1.7,
-    textTransform: 'uppercase',
-    marginTop: 4,
+  mark: { fontFamily: font.displayBold, fontSize: 22, color: '#FFFFFF' },
+  worldName: { fontFamily: font.displayBold, fontSize: 14.5, color: '#FFFFFF' },
+  worldCount: {
+    fontFamily: font.displayBold,
+    fontSize: 11.5,
+    color: 'rgba(255,255,255,0.9)',
+    fontVariant: ['tabular-nums'],
   },
 });

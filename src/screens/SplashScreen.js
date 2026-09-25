@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
-import { color, font, type } from '../theme';
+import { color, font } from '../theme';
 import { Page, GoldButton } from '../components/ui';
 
 export default function SplashScreen({ navigation }) {
@@ -50,15 +50,12 @@ export default function SplashScreen({ navigation }) {
 
         <View style={styles.titleBlock}>
           <Text style={styles.wordmark}>ACEout</Text>
-          <View style={styles.hair} />
-          <Text style={styles.tagline}>
-            Every NCERT experiment, rebuilt as a laboratory you can walk into. Classes 8 to 12.
-          </Text>
+          <Text style={styles.tagline}>Every NCERT experiment. Your own readings.</Text>
         </View>
       </View>
 
       <View style={styles.bottom}>
-        <GoldButton label="Enter the lab" onPress={() => navigation.navigate('Onboarding')} />
+        <GoldButton label="Start" onPress={() => navigation.navigate('Onboarding')} />
         {/* <Text style={styles.signin}>
           Already enrolled? <Text style={styles.signinLink}>Sign in</Text>
         </Text> */}
@@ -76,64 +73,57 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    borderWidth: 1,
-    borderColor: 'rgba(150,102,47,0.16)',
+    borderWidth: 2,
+    borderColor: color.hairline,
   },
   pipOuter: {
     position: 'absolute',
-    top: -2.5,
-    left: 97.5,
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: color.brass,
+    top: -5,
+    left: 95,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: color.gold,
   },
   orbitInner: {
     position: 'absolute',
     width: 132,
     height: 132,
     borderRadius: 66,
-    borderWidth: 1,
-    borderColor: 'rgba(28,24,21,0.09)',
+    borderWidth: 2,
+    borderColor: color.hairline,
   },
   pipInner: {
     position: 'absolute',
-    bottom: -2,
+    bottom: -4,
     left: 26,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: color.physics,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: color.purple,
   },
   sun: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: '#C79F6E',
-    borderWidth: 6,
-    borderColor: '#DCBB8C',
-    shadowColor: '#96662F',
-    shadowOpacity: 0.28,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 16 },
-    elevation: 8,
+    width: 92,
+    height: 86,
+    borderRadius: 46,
+    backgroundColor: color.blue,
+    borderBottomWidth: 7,
+    borderBottomColor: color.blueDeep,
   },
-  titleBlock: { alignItems: 'center', gap: 16 },
+  titleBlock: { alignItems: 'center', gap: 10 },
   wordmark: {
-    fontFamily: font.bold,
-    fontSize: 50,
-    lineHeight: 52,
-    letterSpacing: -1.25,
+    fontFamily: font.displayBold,
+    fontSize: 52,
+    lineHeight: 58,
     color: color.ink,
   },
-  hair: { height: 1, width: 52, backgroundColor: 'rgba(150,102,47,0.5)' },
   tagline: {
     fontFamily: font.regular,
-    fontSize: 14.5,
-    lineHeight: 24,
+    fontSize: 14,
+    lineHeight: 21,
     textAlign: 'center',
     color: color.inkMuted,
-    maxWidth: 278,
+    maxWidth: 260,
   },
   bottom: { gap: 16, paddingBottom: 38, flexDirection: 'column' },
   signin: {

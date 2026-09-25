@@ -13,6 +13,11 @@ import {
   PlusJakartaSans_700Bold,
   PlusJakartaSans_800ExtraBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
+import {
+  Fredoka_500Medium,
+  Fredoka_600SemiBold,
+  Fredoka_700Bold,
+} from '@expo-google-fonts/fredoka';
 
 import { color } from './src/theme';
 import { lockPortrait } from './src/utils/orientation';
@@ -25,6 +30,8 @@ import LabsScreen from './src/screens/LabsScreen';
 import LabScreen from './src/screens/LabScreen';
 import SearchScreen from './src/screens/SearchScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import QuestsScreen from './src/screens/QuestsScreen';
+import CompleteScreen from './src/screens/CompleteScreen';
 
 SplashScreenApi.preventAutoHideAsync().catch(() => {});
 
@@ -51,6 +58,9 @@ function Root() {
     PlusJakartaSans_600SemiBold,
     PlusJakartaSans_700Bold,
     PlusJakartaSans_800ExtraBold,
+    Fredoka_500Medium,
+    Fredoka_600SemiBold,
+    Fredoka_700Bold,
   });
 
   const booted = fontsLoaded && ready;
@@ -85,7 +95,9 @@ function Root() {
           <Stack.Screen name="Chapters" component={ChaptersScreen} />
           <Stack.Screen name="Labs" component={LabsScreen} />
           <Stack.Screen name="Lab" component={LabScreen} />
+          <Stack.Screen name="Complete" component={CompleteScreen} />
           <Stack.Screen name="Search" component={SearchScreen} />
+          <Stack.Screen name="Quests" component={QuestsScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
         </Stack.Navigator>
       </NavigationContainer>

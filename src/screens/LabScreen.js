@@ -33,30 +33,30 @@ export default function LabScreen({ navigation, route }) {
   const [chrome, setChrome] = useState(true);
 
   /**
-   * Back to the chapter's lab list, which is where the student came from and
-   * where the bench they just finished now reads as done.
+   * A finished bench hands over to the reward screen, which owns the way back
+   * to the chapter path.
    *
-   * The params are rebuilt and passed every time rather than left to the route
-   * that is already on the stack: `popTo` without params does not preserve the
+   * The chapter params are rebuilt and carried through rather than left to the
+   * route already on the stack: `popTo` without params does not preserve the
    * old ones, it *replaces* them with undefined, and `LabsScreen` destructures
-   * `route.params` on its first line. Pop back to `Labs` when it is on the
-   * stack; arriving from Search it is not, so replace this screen with it.
+   * `route.params` on its first line.
    */
-  const toLabs = useCallback(() => {
-    const chapter = getChapters(cls, subject).find((c) => c.no === chapterNo) || {
-      no: chapterNo,
-      title: `Chapter ${chapterNo}`,
-      labs: 0,
-    };
-    const params = { cls, subject, chapterNo, chapter };
-
-    const onStack = navigation.getState()?.routes?.some((r) => r.name === 'Labs');
-    if (onStack && navigation.popTo) {
-      navigation.popTo('Labs', params);
-      return;
-    }
-    navigation.replace('Labs', params);
-  }, [navigation, cls, subject, chapterNo]);
+  const toResult = useCallback(
+    (award) => {
+      const chapter = getChapters(cls, subject).find((c) => c.no === chapterNo) || {
+        no: chapterNo,
+        title: `Chapter ${chapterNo}`,
+        labs: 0,
+      };
+      navigation.replace('Complete', {
+        award,
+        title,
+        backTo: { cls, subject, chapterNo, chapter },
+        labParams: { labId, title, cls, subject, chapterNo },
+      });
+    },
+    [navigation, labId, title, cls, subject, chapterNo]
+  );
 
   return (
     <Page background={color.sand}>
@@ -68,12 +68,10 @@ export default function LabScreen({ navigation, route }) {
               <Text style={styles.title} numberOfLines={1}>
                 {title}
               </Text>
-              <Text style={styles.sub}>{finished ? 'Complete' : 'Live simulation'}</Text>
             </View>
-            <View style={styles.status}>
-              <View style={[styles.pulse, finished && { backgroundColor: color.brass }]} />
+            <View style={[styles.status, finished && styles.statusDone]}>
               <Text style={[styles.statusLabel, finished && { color: color.brass }]}>
-                {finished ? 'LOGGED' : 'RUNNING'}
+                {finished ? 'Logged' : 'Live'}
               </Text>
             </View>
           </View>
@@ -84,10 +82,10 @@ export default function LabScreen({ navigation, route }) {
       {Lab ? (
         <Lab
           onChrome={setChrome}
-          onComplete={(result) => {
+          onComplete={async (result) => {
             setFinished(true);
-            completeLab(labId, result, { title, cls, subject, chapterNo });
-            toLabs();
+            const award = await completeLab(labId, result, { title, cls, subject, chapterNo });
+            toResult(award);
           }}
         />
       ) : (
@@ -123,26 +121,23 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   title: {
-    fontFamily: font.bold,
-    fontSize: 13.5,
-    letterSpacing: -0.14,
+    fontFamily: font.display,
+    fontSize: 15,
     color: color.inkStrong,
   },
-  sub: {
-    fontFamily: font.bold,
-    fontSize: 9.5,
-    letterSpacing: 1.9,
-    textTransform: 'uppercase',
-    color: color.inkMuted,
-    marginTop: 2,
+  status: {
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: color.greenSoft,
+    borderWidth: 2,
+    borderColor: color.greenEdge,
   },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  pulse: { width: 5, height: 5, borderRadius: 3, backgroundColor: color.green },
+  statusDone: { backgroundColor: '#FDF3DD', borderColor: '#F3D48F' },
   statusLabel: {
-    fontFamily: font.bold,
-    fontSize: 9.5,
-    letterSpacing: 1.7,
-    color: color.green,
+    fontFamily: font.displayBold,
+    fontSize: 12,
+    color: color.greenDeep,
   },
   exit: {
     position: 'absolute',

@@ -1,19 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
-import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
-import { color, font, space } from '../theme';
-import { Page, PageScroll, ListRow } from '../components/ui';
+import { color, font, radius, bevel, deepen, space } from '../theme';
+import { Page, PageScroll, Stars } from '../components/ui';
 import TabBar from '../components/TabBar';
-import { searchLabs, SEARCH_INDEX } from '../data/catalog';
+import { searchLabs, SEARCH_INDEX, SUBJECTS } from '../data/catalog';
 import { useAppState } from '../store/AppState';
-import { hasCompleted } from '../store/progress';
-
-const FILTERS = ['Labs', 'Chapters', 'Concepts'];
+import { starsFor } from '../store/game';
 
 export default function SearchScreen({ navigation }) {
-  const { progress } = useAppState();
+  const { game } = useAppState();
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState('Labs');
 
   const results = useMemo(
     () => (query.trim() ? searchLabs(query) : SEARCH_INDEX),
@@ -24,75 +20,76 @@ export default function SearchScreen({ navigation }) {
     <Page>
       <View style={styles.header}>
         <View style={styles.field}>
-          <View style={styles.dot} />
+          <Text style={styles.glass}>⌕</Text>
           <TextInput
             style={styles.input}
             value={query}
             onChangeText={setQuery}
-            placeholder="Search labs, chapters, concepts"
-            placeholderTextColor="rgba(28,24,21,0.3)"
+            placeholder="Search benches"
+            placeholderTextColor={color.inkFaint}
             autoCorrect={false}
             returnKeyType="search"
           />
         </View>
-        <View style={styles.filters}>
-          {FILTERS.map((f) => (
-            <Pressable key={f} onPress={() => setFilter(f)}>
-              <Text style={[styles.filter, f === filter && styles.filterOn]}>{f}</Text>
-            </Pressable>
-          ))}
-        </View>
       </View>
 
-      <PageScroll>
+      <PageScroll contentStyle={{ gap: 10 }}>
         {results.length === 0 ? (
-          <Text style={styles.empty}>
-            Nothing matches “{query}”. Try “work”, “energy”, “incline” or “friction”.
-          </Text>
+          <Text style={styles.empty}>Nothing for “{query}”.</Text>
         ) : (
-          results.map((r, i) => (
-            <ListRow
-              key={r.id}
-              first={i === 0}
-              onPress={() =>
-                r.built
-                  ? navigation.navigate('Lab', {
-                      labId: r.id,
-                      title: r.title,
-                      cls: r.cls,
-                      subject: r.subject,
-                      chapterNo: r.chapterNo,
-                    })
-                  : navigation.navigate('Labs', {
-                      cls: r.cls,
-                      subject: r.subject,
-                      chapterNo: r.chapterNo,
-                      chapter: { no: r.chapterNo, title: r.title, labs: 4 },
-                    })
-              }
-            >
-              <View style={styles.swatch}>
-                <Svg width={36} height={36}>
-                  <Defs>
-                    <LinearGradient id={`s${i}`} x1="0" y1="0" x2="1" y2="1">
-                      <Stop offset="0" stopColor={r.art[0]} />
-                      <Stop offset="1" stopColor={r.art[1]} />
-                    </LinearGradient>
-                  </Defs>
-                  <Rect width={36} height={36} rx={11} fill={`url(#s${i})`} />
-                </Svg>
-              </View>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={styles.title}>{r.title}</Text>
-                <Text style={styles.crumb}>{r.crumb}</Text>
-              </View>
-              {hasCompleted(progress, r.id) ? (
-                <Text style={styles.doneMark}>DONE</Text>
-              ) : r.built ? (
-                <Text style={styles.live}>LIVE</Text>
-              ) : null}
-            </ListRow>
-          ))
+          results.map((r) => {
+            const subj = SUBJECTS.find((s) => s.key === r.subject);
+            const accent = subj?.accent || color.blue;
+            const stars = starsFor(game, r.id);
+            return (
+              <Pressable
+                key={r.id}
+                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                onPress={() =>
+                  r.built
+                    ? navigation.navigate('Lab', {
+                        labId: r.id,
+                        title: r.title,
+                        cls: r.cls,
+                        subject: r.subject,
+                        chapterNo: r.chapterNo,
+                      })
+                    : navigation.navigate('Labs', {
+                        cls: r.cls,
+                        subject: r.subject,
+                        chapterNo: r.chapterNo,
+                        chapter: { no: r.chapterNo, title: r.title, labs: 4 },
+                      })
+                }
+              >
+                <View
+                  style={[
+                    styles.mark,
+                    r.built
+                      ? { backgroundColor: accent, ...bevel(deepen[accent] || color.inkStrong, 3) }
+                      : { backgroundColor: color.locked, ...bevel(color.lockedDeep, 3) },
+                  ]}
+                >
+                  <Text style={[styles.markText, !r.built && { color: color.lockedInk }]}>
+                    {subj?.mark || '··'}
+                  </Text>
+                </View>
+                <View style={{ flex: 1, gap: 5 }}>
+                  <Text style={styles.title} numberOfLines={2}>
+                    {r.title}
+                  </Text>
+                  <Text style={styles.crumb}>{r.crumb}</Text>
+                </View>
+                {stars > 0 ? (
+                  <Stars earned={stars} size={12} />
+                ) : r.built ? (
+                  <View style={styles.live}>
+                    <Text style={styles.liveText}>Live</Text>
+                  </View>
+                ) : null}
+              </Pressable>
+            );
+          })
         )}
       </PageScroll>
 
@@ -102,66 +99,61 @@ export default function SearchScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: space.gutter, paddingTop: 14, paddingBottom: 18, gap: 16 },
+  header: { paddingHorizontal: space.gutter, paddingTop: 12, paddingBottom: 16 },
   field: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 11,
+    gap: 10,
     paddingVertical: 12,
-    paddingHorizontal: 17,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: 'rgba(150,102,47,0.4)',
-    backgroundColor: 'rgba(150,102,47,0.05)',
+    paddingHorizontal: 16,
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    borderColor: color.hairline,
+    backgroundColor: color.sunk,
   },
-  dot: { width: 13, height: 13, borderRadius: 7, borderWidth: 1.4, borderColor: color.brass },
+  glass: { fontSize: 19, color: color.inkFaint, marginTop: -2 },
   input: {
     flex: 1,
-    fontFamily: font.medium,
-    fontSize: 13.5,
+    fontFamily: font.display,
+    fontSize: 15,
     color: color.inkStrong,
     padding: 0,
   },
-  filters: { flexDirection: 'row', gap: 20, paddingLeft: 4 },
-  filter: {
-    fontFamily: font.bold,
-    fontSize: 10,
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
-    color: color.inkMuted,
-    paddingBottom: 7,
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    padding: 12,
+    borderRadius: radius.tile,
+    borderWidth: 2,
+    borderColor: color.hairline,
+    ...bevel(color.hairline),
   },
-  filterOn: {
-    color: color.brass,
-    borderBottomWidth: 1,
-    borderBottomColor: color.brass,
+  pressed: { transform: [{ translateY: 3 }], borderBottomWidth: 2 },
+  mark: {
+    width: 44,
+    height: 40,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  swatch: { width: 36, height: 36, borderRadius: 11, overflow: 'hidden' },
-  title: { fontFamily: font.semibold, fontSize: 14, lineHeight: 19, color: color.inkStrong },
+  markText: { fontFamily: font.displayBold, fontSize: 14, color: '#FFFFFF' },
+  title: { fontFamily: font.display, fontSize: 14.5, lineHeight: 18, color: color.inkStrong },
   crumb: {
-    fontFamily: font.bold,
+    fontFamily: font.extra,
     fontSize: 9.5,
-    letterSpacing: 1.4,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: color.inkMuted,
-  },
-  doneMark: {
-    fontFamily: font.bold,
-    fontSize: 9,
-    letterSpacing: 1.4,
-    color: color.brass,
+    color: color.inkFaint,
   },
   live: {
-    fontFamily: font.bold,
-    fontSize: 9,
-    letterSpacing: 1.4,
-    color: color.green,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    backgroundColor: color.greenSoft,
+    borderWidth: 2,
+    borderColor: color.greenEdge,
   },
-  empty: {
-    fontFamily: font.regular,
-    fontSize: 13,
-    lineHeight: 21,
-    color: color.inkMuted,
-    paddingTop: 10,
-  },
+  liveText: { fontFamily: font.displayBold, fontSize: 11, color: color.greenDeep },
+  empty: { fontFamily: font.regular, fontSize: 13, color: color.inkMuted, paddingTop: 8 },
 });

@@ -5,10 +5,16 @@ import {
   Pressable,
   StyleSheet,
   ScrollView,
-  Platform,
 } from 'react-native';
+import Svg, { Polygon } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, type, radius, font, space } from '../theme';
+import { color, type, radius, font, space, bevel, deepen } from '../theme';
+
+/**
+ * The gamified kit. Everything pressable is a bevelled block: a flat fill with
+ * a hard bottom edge that collapses when you press it, so the tile physically
+ * moves under the thumb. Nothing here uses a blur shadow.
+ */
 
 export function Eyebrow({ children, tone, style, ...rest }) {
   return (
@@ -22,40 +28,71 @@ export function Rule({ style }) {
   return <View style={[styles.rule, style]} />;
 }
 
-/** The brass pill button used for every primary action in the design. */
-export function GoldButton({ label, onPress, disabled, style, compact }) {
+/**
+ * The house button. `tone` picks the fill; the bottom edge is derived from it,
+ * so a button only ever needs one colour.
+ */
+export function ChunkyButton({
+  label,
+  onPress,
+  disabled,
+  tone = color.green,
+  style,
+  compact,
+  textStyle,
+}) {
+  const deep = deepen[tone] || color.inkStrong;
   return (
     <Pressable
       onPress={disabled ? undefined : onPress}
       style={({ pressed }) => [
-        styles.gold,
-        compact && styles.goldCompact,
-        disabled && styles.goldDisabled,
-        pressed && !disabled && styles.goldPressed,
+        styles.chunky,
+        { backgroundColor: tone },
+        bevel(deep),
+        compact && styles.chunkyCompact,
+        disabled && styles.chunkyDisabled,
+        pressed && !disabled && styles.chunkyPressed,
         style,
       ]}
     >
-      <Text style={[styles.goldLabel, disabled && styles.goldLabelDisabled]}>
+      <Text
+        style={[styles.chunkyLabel, disabled && { color: color.lockedInk }, textStyle]}
+        numberOfLines={1}
+      >
         {label}
       </Text>
     </Pressable>
   );
 }
 
-/** Outlined pill — the "Reset" counterpart. */
+/** Primary action, kept under its old name so every bench keeps working. */
+export function GoldButton({ label, onPress, disabled, style, compact, tone }) {
+  return (
+    <ChunkyButton
+      label={label}
+      onPress={onPress}
+      disabled={disabled}
+      style={[{ flexGrow: 1, flexShrink: 1 }, style]}
+      compact={compact}
+      tone={tone || color.green}
+    />
+  );
+}
+
+/** Outlined twin — the "Reset" counterpart. */
 export function GhostButton({ label, onPress, disabled, style, tone }) {
   return (
     <Pressable
       onPress={disabled ? undefined : onPress}
       style={({ pressed }) => [
         styles.ghost,
-        tone ? { borderColor: tone } : null,
+        tone ? { borderColor: tone, borderBottomColor: tone } : null,
         disabled && { opacity: 0.4 },
-        pressed && !disabled && { backgroundColor: 'rgba(28,24,21,0.05)' },
+        pressed && !disabled && styles.ghostPressed,
         style,
       ]}
     >
-      <Text style={[styles.ghostLabel, tone ? { color: tone } : null]}>
+      <Text style={[styles.ghostLabel, tone ? { color: tone } : null]} numberOfLines={1}>
         {label}
       </Text>
     </Pressable>
@@ -63,22 +100,23 @@ export function GhostButton({ label, onPress, disabled, style, tone }) {
 }
 
 /** Circular back chevron in the top-left of every inner screen. */
-export function BackButton({ onPress }) {
+export function BackButton({ onPress, light }) {
   return (
     <Pressable
       onPress={onPress}
       hitSlop={10}
       style={({ pressed }) => [
         styles.back,
-        pressed && { borderColor: 'rgba(150,102,47,0.5)' },
+        light && { borderColor: 'rgba(255,255,255,0.45)' },
+        pressed && { opacity: 0.55 },
       ]}
     >
-      <Text style={styles.backGlyph}>←</Text>
+      <Text style={[styles.backGlyph, light && { color: '#FFFFFF' }]}>←</Text>
     </Pressable>
   );
 }
 
-/** Screen header: back button + brass eyebrow, then an optional display title. */
+/** Screen header: back button + eyebrow, then an optional display title. */
 export function ScreenHeader({ onBack, eyebrow, title, subtitle, right, children }) {
   return (
     <View style={styles.header}>
@@ -93,14 +131,14 @@ export function ScreenHeader({ onBack, eyebrow, title, subtitle, right, children
         )}
         {right}
       </View>
-      {title ? <Text style={[type.display, styles.headerTitle]}>{title}</Text> : null}
-      {subtitle ? <Text style={[type.body, { marginTop: 10 }]}>{subtitle}</Text> : null}
+      {title ? <Text style={type.display}>{title}</Text> : null}
+      {subtitle ? <Text style={[type.body, { marginTop: 4 }]}>{subtitle}</Text> : null}
       {children}
     </View>
   );
 }
 
-/** Safe-area aware page wrapper that matches the prototype's paper background. */
+/** Safe-area aware page wrapper. */
 export function Page({ children, style, background }) {
   const insets = useSafeAreaInsets();
   return (
@@ -133,15 +171,15 @@ export function PageScroll({ children, contentStyle, ...rest }) {
   );
 }
 
-/** A hairline-separated list row, the design's dominant list idiom. */
+/** A list row inside a bordered card. */
 export function ListRow({ onPress, children, first }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.listRow,
-        !first && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: color.hairline },
-        pressed && { backgroundColor: 'rgba(28,24,21,0.03)' },
+        !first && { borderTopWidth: 2, borderTopColor: color.hairline },
+        pressed && { backgroundColor: color.sunk },
       ]}
     >
       {children}
@@ -158,15 +196,15 @@ export function Panel({ children, style, tone }) {
   );
 }
 
-/** The design's left-rule annotation block ("Observation", "Why"). */
-export function Annotation({ label, tone = color.brass, children, style }) {
+/** Left-rule annotation block ("Observation", "Why"). */
+export function Annotation({ label, tone = color.purple, children, style }) {
   return (
-    <View style={[styles.annotation, { borderLeftColor: withAlpha(tone, 0.35) }, style]}>
-      <Eyebrow tone={tone} style={{ letterSpacing: 2.1, fontSize: 9.5 }}>
+    <View style={[styles.annotation, { borderLeftColor: withAlpha(tone, 0.4) }, style]}>
+      <Eyebrow tone={tone} style={{ letterSpacing: 1.5, fontSize: 10 }}>
         {label}
       </Eyebrow>
       {typeof children === 'string' ? (
-        <Text style={[type.body, { color: color.inkSoft, lineHeight: 22 }]}>{children}</Text>
+        <Text style={[type.body, { color: color.inkSoft, lineHeight: 21 }]}>{children}</Text>
       ) : (
         children
       )}
@@ -180,8 +218,8 @@ export function Tag({ label, tone = color.inkMuted, filled }) {
     <View
       style={[
         styles.tag,
-        { borderColor: withAlpha(tone, 0.45) },
-        filled && { backgroundColor: withAlpha(tone, 0.1) },
+        { borderColor: withAlpha(tone, 0.4) },
+        filled && { backgroundColor: withAlpha(tone, 0.12), borderColor: 'transparent' },
       ]}
     >
       <Text style={[styles.tagLabel, { color: tone }]}>{label}</Text>
@@ -189,7 +227,7 @@ export function Tag({ label, tone = color.inkMuted, filled }) {
   );
 }
 
-/** Segmented control — used for Guided / Free play. */
+/** Segmented control — Guided / Free play. */
 export function Segmented({ options, value, onChange, style }) {
   return (
     <View style={[styles.segmented, style]}>
@@ -211,6 +249,80 @@ export function Segmented({ options, value, onChange, style }) {
   );
 }
 
+// --- gamified primitives ---------------------------------------------------
+
+/** Rounded progress track. `value` is 0–1. */
+export function Bar({ value, tone = color.green, height = 14, track, style }) {
+  const pct = `${Math.max(0, Math.min(1, value || 0)) * 100}%`;
+  return (
+    <View style={[styles.track, { height, backgroundColor: track || color.hairline }, style]}>
+      <View style={[styles.fill, { width: pct, backgroundColor: tone }]} />
+    </View>
+  );
+}
+
+/** A counter in the top bar: streak, XP, energy. */
+export function Counter({ glyph, value, tone, style }) {
+  return (
+    <View style={[styles.counter, style]}>
+      <Text style={[styles.counterGlyph, { color: tone }]}>{glyph}</Text>
+      <Text style={[styles.counterValue, { color: tone }]}>{value}</Text>
+    </View>
+  );
+}
+
+/** Three-up result tile — a coloured frame around a white number. */
+export function StatTile({ label, value, tone = color.gold, style }) {
+  return (
+    <View style={[styles.statTile, { backgroundColor: tone }, style]}>
+      <Text style={styles.statLabel} numberOfLines={1}>
+        {label}
+      </Text>
+      <View style={styles.statWell}>
+        <Text style={[styles.statValue, { color: deepen[tone] || color.inkStrong }]} numberOfLines={1}>
+          {value}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/** Row of stars, filled up to `earned`. */
+export function Stars({ earned = 0, total = 3, size = 15, style }) {
+  return (
+    <View style={[{ flexDirection: 'row', gap: 2 }, style]}>
+      {Array.from({ length: total }).map((_, i) => (
+        <Text
+          key={i}
+          style={{ fontSize: size, color: i < earned ? color.gold : color.locked }}
+        >
+          ★
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+/** Hexagon badge — the trophy-shelf shape. */
+export function Badge({ glyph, tone = color.locked, size = 56, style }) {
+  const h = size * 1.12;
+  return (
+    <View style={[styles.badge, { width: size, height: h }, style]}>
+      <Svg width={size} height={h} viewBox="0 0 100 112">
+        <Polygon points="50,0 100,28 100,84 50,112 0,84 0,28" fill={tone} />
+      </Svg>
+      <Text
+        style={[
+          styles.badgeGlyph,
+          { fontSize: size * 0.3, color: tone === color.locked ? color.lockedInk : '#FFFFFF' },
+        ]}
+      >
+        {glyph}
+      </Text>
+    </View>
+  );
+}
+
 export function withAlpha(hex, alpha) {
   if (!hex || hex[0] !== '#') return hex;
   const n = parseInt(hex.slice(1), 16);
@@ -222,130 +334,128 @@ export function withAlpha(hex, alpha) {
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: color.screen },
-  rule: {
-    height: StyleSheet.hairlineWidth * 2,
-    backgroundColor: color.hairline,
-  },
+  rule: { height: 2, backgroundColor: color.hairline },
   header: {
     paddingHorizontal: space.gutter,
-    paddingTop: 12,
-    paddingBottom: 18,
-    gap: 14,
+    paddingTop: 10,
+    paddingBottom: 16,
+    gap: 12,
   },
-  headerTop: { flexDirection: 'row', alignItems: 'center', gap: 13 },
-  headerTitle: { marginTop: 2 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   back: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: color.edge,
+    borderWidth: 2,
+    borderColor: color.hairline,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backGlyph: { fontSize: 15, color: color.inkSoft, marginTop: -1 },
-  gold: {
-    // flexGrow rather than flex, so the button fills the spare width in a row
-    // but keeps its natural height when stacked in a scrolling column.
-    flexGrow: 1,
-    flexShrink: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    borderRadius: radius.pill,
-    backgroundColor: color.goldBottom,
-    borderTopWidth: 1.5,
-    borderTopColor: color.goldTop,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  goldCompact: { paddingVertical: 12, flexGrow: 0 },
-  goldPressed: { backgroundColor: '#9C6F2A' },
-  goldDisabled: { backgroundColor: 'rgba(28,24,21,0.09)', borderTopColor: 'transparent' },
-  goldLabel: {
-    fontFamily: font.extra,
-    fontSize: 12,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.onGold,
-  },
-  goldLabelDisabled: { color: 'rgba(28,24,21,0.35)' },
-  ghost: {
+  backGlyph: { fontSize: 16, color: color.inkMuted, marginTop: -2 },
+
+  chunky: {
     paddingVertical: 15,
-    paddingHorizontal: 22,
-    borderRadius: radius.pill,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: 'rgba(28,24,21,0.16)',
+    paddingHorizontal: 18,
+    borderRadius: radius.tile,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ghostLabel: {
-    fontFamily: font.bold,
-    fontSize: 12,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    color: color.inkSoft,
+  chunkyCompact: { paddingVertical: 11, flexGrow: 0 },
+  chunkyPressed: { transform: [{ translateY: 3 }], borderBottomWidth: 1 },
+  chunkyDisabled: { backgroundColor: color.locked, borderBottomColor: color.lockedDeep },
+  chunkyLabel: { ...type.action, color: '#FFFFFF' },
+
+  ghost: {
+    paddingVertical: 13,
+    paddingHorizontal: 20,
+    borderRadius: radius.tile,
+    borderWidth: 2,
+    borderColor: color.hairline,
+    borderBottomWidth: 4,
+    borderBottomColor: color.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  ghostPressed: { transform: [{ translateY: 3 }], borderBottomWidth: 2 },
+  ghostLabel: {
+    fontFamily: font.displayBold,
+    fontSize: 13.5,
+    letterSpacing: 0.9,
+    textTransform: 'uppercase',
+    color: color.inkMuted,
+  },
+
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 18,
-    paddingVertical: 19,
+    gap: 14,
+    paddingVertical: 15,
     paddingHorizontal: 4,
   },
   panel: {
-    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderWidth: 2,
     borderColor: color.hairline,
     borderRadius: radius.tile,
     backgroundColor: color.paper,
     padding: 16,
   },
-  annotation: {
-    gap: 8,
-    paddingLeft: 14,
-    borderLeftWidth: 1,
-  },
+  annotation: { gap: 6, paddingLeft: 13, borderLeftWidth: 3 },
   tag: {
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: radius.pill,
-    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderWidth: 2,
   },
   tagLabel: {
-    fontFamily: font.bold,
+    fontFamily: font.extra,
     fontSize: 9,
-    letterSpacing: 1.4,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
   segmented: {
     flexDirection: 'row',
     padding: 3,
     borderRadius: radius.pill,
-    backgroundColor: 'rgba(28,24,21,0.05)',
+    backgroundColor: color.hairline,
     gap: 3,
   },
-  segment: {
-    flex: 1,
-    paddingVertical: 9,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-  },
-  segmentActive: {
-    backgroundColor: color.paper,
-    ...(Platform.OS === 'android'
-      ? { elevation: 1 }
-      : {
-          shadowColor: '#4A3C28',
-          shadowOpacity: 0.12,
-          shadowRadius: 5,
-          shadowOffset: { width: 0, height: 2 },
-        }),
-  },
+  segment: { flex: 1, paddingVertical: 9, borderRadius: radius.pill, alignItems: 'center' },
+  segmentActive: { backgroundColor: color.screen },
   segmentLabel: {
-    fontFamily: font.bold,
-    fontSize: 10.5,
-    letterSpacing: 1.2,
+    fontFamily: font.displayBold,
+    fontSize: 12,
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
     color: color.inkMuted,
   },
-  segmentLabelActive: { color: color.brass },
+  segmentLabelActive: { color: color.blueDeep },
+
+  track: { borderRadius: 999, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: 999 },
+
+  counter: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  counterGlyph: { fontSize: 15 },
+  counterValue: { fontFamily: font.displayBold, fontSize: 17, fontVariant: ['tabular-nums'] },
+
+  statTile: { flex: 1, borderRadius: radius.tile, padding: 3 },
+  statLabel: {
+    fontFamily: font.extra,
+    fontSize: 9.5,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    paddingVertical: 5,
+  },
+  statWell: {
+    borderRadius: radius.chip,
+    backgroundColor: color.screen,
+    paddingVertical: 11,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+  },
+  statValue: { fontFamily: font.displayBold, fontSize: 21, fontVariant: ['tabular-nums'] },
+
+  badge: { alignItems: 'center', justifyContent: 'center' },
+  badgeGlyph: { position: 'absolute', fontFamily: font.displayBold },
 });

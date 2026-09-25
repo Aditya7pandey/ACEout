@@ -1,22 +1,25 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, TextInput } from 'react-native';
-import { color, font, type, space } from '../theme';
-import { Page, PageScroll, Eyebrow, GhostButton } from '../components/ui';
+import { color, font, radius, bevel, space } from '../theme';
+import { Page, PageScroll, GhostButton, Bar, Badge, Stars } from '../components/ui';
 import { confirm } from '../components/confirm';
 import TabBar from '../components/TabBar';
-import { SUBJECTS, findLabMeta } from '../data/catalog';
+import { findLabMeta } from '../data/catalog';
 import { describeWhen } from '../store/progress';
 import { BOARDS, CLASS_OPTIONS, initialsOf, cleanName, isValidName } from '../store/user';
 import { useAppState } from '../store/AppState';
-import { formatSigFigs } from '../measure/leastCount';
+import { BADGES, earnedBadges, totalStars, starsFor } from '../store/game';
 
+/** The trophy shelf: who you are, what you have banked, what you have run. */
 export default function ProfileScreen({ navigation }) {
-  const { user, progress, stats, saveProfile, resetProgress, signOut } = useAppState();
+  const { user, progress, stats, game, level, saveProfile, resetProgress, signOut } =
+    useAppState();
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(user?.name || '');
   const [openRow, setOpenRow] = useState(null);
 
-  const completions = progress.completions || [];
+  const completions = (progress.completions || []).slice(0, 5);
+  const earned = earnedBadges(game, stats);
 
   const commitName = () => {
     if (isValidName(draftName)) saveProfile({ name: cleanName(draftName) });
@@ -26,9 +29,8 @@ export default function ProfileScreen({ navigation }) {
 
   const confirmReset = () =>
     confirm({
-      title: 'Clear your lab record?',
-      message:
-        'Every completed experiment and reading stored on this device will be removed. Your name and class stay.',
+      title: 'Clear your record?',
+      message: 'Every logged bench, star and XP on this device goes. Your name and class stay.',
       confirmLabel: 'Clear',
       cancelLabel: 'Keep it',
       onConfirm: () => resetProgress(),
@@ -37,8 +39,7 @@ export default function ProfileScreen({ navigation }) {
   const confirmSignOut = () =>
     confirm({
       title: 'Start over?',
-      message:
-        'This wipes your name, class and every logged experiment, and takes you back to onboarding.',
+      message: 'This wipes your name, class and everything you have earned.',
       confirmLabel: 'Start over',
       onConfirm: async () => {
         await signOut();
@@ -49,8 +50,13 @@ export default function ProfileScreen({ navigation }) {
   return (
     <Page>
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initialsOf(user?.name)}</Text>
+        <View>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initialsOf(user?.name)}</Text>
+          </View>
+          <View style={styles.levelChip}>
+            <Text style={styles.levelChipText}>Lv {level.level}</Text>
+          </View>
         </View>
         <View style={{ gap: 5, flex: 1 }}>
           {editingName ? (
@@ -65,8 +71,8 @@ export default function ProfileScreen({ navigation }) {
               autoCorrect={false}
               maxLength={40}
               returnKeyType="done"
-              placeholder="Your full name"
-              placeholderTextColor="rgba(28,24,21,0.28)"
+              placeholder="Your name"
+              placeholderTextColor={color.inkFaint}
             />
           ) : (
             <Pressable
@@ -75,71 +81,57 @@ export default function ProfileScreen({ navigation }) {
                 setEditingName(true);
               }}
             >
-              <Text style={type.title} numberOfLines={1}>
+              <Text style={styles.name} numberOfLines={1}>
                 {user?.name || 'Your name'}
               </Text>
             </Pressable>
           )}
           <Text style={styles.sub}>
-            Class {user?.cls || '—'} · {user?.board || '—'}
-            {stats.streak > 0 ? ` · ${stats.streak}-day streak` : ''}
+            Class {user?.cls || '—'} · {level.rank}
           </Text>
         </View>
       </View>
 
-      <PageScroll contentStyle={{ gap: 26 }}>
-        <View style={styles.tally}>
-          <Stat value={stats.labsDone} label="Labs done" />
-          <Stat value={stats.totalRuns} label="Total runs" />
-          <Stat
-            value={describeWhen(stats.lastActiveAt) || '—'}
-            label="Last bench"
-            small
-          />
+      <PageScroll contentStyle={{ gap: 22 }}>
+        <View style={styles.tiles}>
+          <Tile value={stats.streak} label="Streak" tone={color.red} />
+          <Tile value={game.xp.toLocaleString()} label="XP" tone={color.gold} />
+          <Tile value={totalStars(game)} label="Stars" tone={color.blue} />
+        </View>
+
+        <View style={{ gap: 9 }}>
+          <View style={styles.barTop}>
+            <Text style={styles.sectionTitle}>Level {level.level}</Text>
+            <Text style={styles.barXp}>{level.toNext} XP to go</Text>
+          </View>
+          <Bar value={level.fraction} tone={color.gold} height={14} />
         </View>
 
         <View style={{ gap: 14 }}>
-          <Eyebrow>Progress by discipline</Eyebrow>
-          {SUBJECTS.map((s) => {
-            const done = stats.bySubject[s.key] || 0;
-            const total = s.totalLabs;
-            return (
-              <View key={s.key} style={{ gap: 9 }}>
-                <View style={styles.progressHead}>
-                  <Text style={styles.progressName}>{s.name}</Text>
-                  <Text style={styles.progressCount}>
-                    {done}/{total}
-                  </Text>
-                </View>
-                <View style={styles.track}>
-                  <View
-                    style={[
-                      styles.fill,
-                      {
-                        width: `${Math.min(100, (done / total) * 100)}%`,
-                        backgroundColor: s.accent,
-                      },
-                    ]}
-                  />
-                </View>
+          <Text style={styles.sectionTitle}>Badges</Text>
+          <View style={styles.shelf}>
+            {BADGES.map((b) => (
+              <View key={b.id} style={styles.badgeSlot}>
+                <Badge glyph={b.glyph} tone={earned[b.id] ? b.tone : color.locked} size={54} />
+                <Text style={[styles.badgeLabel, !earned[b.id] && { color: color.inkFaint }]}>
+                  {b.label}
+                </Text>
               </View>
-            );
-          })}
+            ))}
+          </View>
         </View>
 
-        <View style={{ gap: 12 }}>
-          <Eyebrow>Recently run</Eyebrow>
+        <View style={{ gap: 10 }}>
+          <Text style={styles.sectionTitle}>Recent benches</Text>
           {completions.length === 0 ? (
-            <Text style={styles.empty}>
-              Nothing yet. Class 11 · Physics · Work, Energy and Power has a live bench waiting.
-            </Text>
+            <Text style={styles.empty}>Nothing yet. Pick a world and start.</Text>
           ) : (
             completions.map((c) => {
               const meta = findLabMeta(c.labId);
               return (
                 <Pressable
                   key={c.labId}
-                  style={styles.recent}
+                  style={({ pressed }) => [styles.recent, pressed && styles.pressed]}
                   onPress={() =>
                     meta?.built
                       ? navigation.navigate('Lab', {
@@ -152,19 +144,13 @@ export default function ProfileScreen({ navigation }) {
                       : undefined
                   }
                 >
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={styles.recentTitle}>{c.title || meta?.title || c.labId}</Text>
-                    <Text style={styles.recentWhen}>
-                      {describeWhen(c.at)} · {c.trials} readings
-                      {c.runs > 1 ? ` · ${c.runs} runs` : ''}
-                      {Number.isFinite(c.mu) ? (
-                        // Kept out of the uppercase transform — μ must not
-                        // become a capital Mu.
-                        <Text style={styles.symbol}> · μ = {formatSigFigs(c.mu, 2)}</Text>
-                      ) : null}
+                  <View style={{ flex: 1, gap: 6 }}>
+                    <Text style={styles.recentTitle} numberOfLines={1}>
+                      {c.title || meta?.title || c.labId}
                     </Text>
+                    <Text style={styles.recentWhen}>{describeWhen(c.at)}</Text>
                   </View>
-                  <Text style={styles.done}>DONE</Text>
+                  <Stars earned={starsFor(game, c.labId)} size={14} />
                 </Pressable>
               );
             })
@@ -172,7 +158,7 @@ export default function ProfileScreen({ navigation }) {
         </View>
 
         <View style={{ gap: 4 }}>
-          <Eyebrow>Your setup</Eyebrow>
+          <Text style={styles.sectionTitle}>Setup</Text>
           <OptionRow
             label="Class"
             value={user?.cls ? `Class ${user.cls}` : '—'}
@@ -198,18 +184,10 @@ export default function ProfileScreen({ navigation }) {
               setOpenRow(null);
             }}
           />
-          <View style={styles.setting}>
-            <Text style={styles.settingLabel}>Offline lab downloads</Text>
-            <Text style={styles.settingValue}>All bundled</Text>
-          </View>
-          <View style={styles.setting}>
-            <Text style={styles.settingLabel}>Where your data lives</Text>
-            <Text style={styles.settingValue}>This device only</Text>
-          </View>
         </View>
 
         <View style={{ gap: 10 }}>
-          <GhostButton label="Clear lab record" onPress={confirmReset} tone={color.inkMuted} />
+          <GhostButton label="Clear record" onPress={confirmReset} />
           <GhostButton label="Start over" onPress={confirmSignOut} tone={color.red} />
         </View>
       </PageScroll>
@@ -219,13 +197,13 @@ export default function ProfileScreen({ navigation }) {
   );
 }
 
-function Stat({ value, label, small }) {
+function Tile({ value, label, tone }) {
   return (
-    <View style={{ flex: 1, gap: 5 }}>
-      <Text style={[styles.statValue, small && styles.statValueSmall]} numberOfLines={1}>
+    <View style={[styles.tile, { borderColor: tone }]}>
+      <Text style={[styles.tileValue, { color: tone }]} numberOfLines={1}>
         {value}
       </Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.tileLabel}>{label}</Text>
     </View>
   );
 }
@@ -236,7 +214,7 @@ function OptionRow({ label, value, options, selected, open, onToggle, onPick, re
     <View>
       <Pressable style={styles.setting} onPress={onToggle}>
         <Text style={styles.settingLabel}>{label}</Text>
-        <Text style={[styles.settingValue, open && { color: color.brass }]}>{value}</Text>
+        <Text style={[styles.settingValue, open && { color: color.blueDeep }]}>{value}</Text>
       </Pressable>
       {open ? (
         <View style={styles.chips}>
@@ -248,7 +226,7 @@ function OptionRow({ label, value, options, selected, open, onToggle, onPick, re
                 onPress={() => onPick(o)}
                 style={[styles.chip, on && styles.chipOn]}
               >
-                <Text style={[styles.chipLabel, on && { color: color.brass }]}>
+                <Text style={[styles.chipLabel, on && { color: color.blueDeep }]}>
                   {render ? render(o) : o}
                 </Text>
               </Pressable>
@@ -264,116 +242,124 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 17,
+    gap: 18,
     paddingHorizontal: space.gutter,
-    paddingTop: 18,
-    paddingBottom: 22,
+    paddingTop: 14,
+    paddingBottom: 20,
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#C79F6E',
-    borderWidth: 5,
-    borderColor: '#DCBB8C',
+    width: 66,
+    height: 62,
+    borderRadius: 22,
+    backgroundColor: color.blue,
+    ...bevel(color.blueDeep, 5),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontFamily: font.extra, fontSize: 16, color: '#2A1F10' },
+  avatarText: { fontFamily: font.displayBold, fontSize: 21, color: '#FFFFFF' },
+  levelChip: {
+    position: 'absolute',
+    bottom: -10,
+    alignSelf: 'center',
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    backgroundColor: color.ink,
+  },
+  levelChipText: { fontFamily: font.displayBold, fontSize: 11, color: color.goldTop },
+  name: { fontFamily: font.displayBold, fontSize: 24, color: color.ink },
   nameInput: {
-    fontFamily: font.bold,
-    fontSize: 22,
-    lineHeight: 26,
-    letterSpacing: -0.44,
+    fontFamily: font.displayBold,
+    fontSize: 24,
     color: color.ink,
     padding: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(150,102,47,0.5)',
+    borderBottomWidth: 2,
+    borderBottomColor: color.blueEdge,
   },
   sub: {
-    fontFamily: font.bold,
+    fontFamily: font.extra,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    color: color.inkMuted,
+  },
+
+  tiles: { flexDirection: 'row', gap: 10 },
+  tile: {
+    flex: 1,
+    borderRadius: radius.tile,
+    borderWidth: 2,
+    borderBottomWidth: 4,
+    paddingVertical: 12,
+    alignItems: 'center',
+    gap: 3,
+  },
+  tileValue: { fontFamily: font.displayBold, fontSize: 22, fontVariant: ['tabular-nums'] },
+  tileLabel: {
+    fontFamily: font.extra,
     fontSize: 9.5,
-    letterSpacing: 1.7,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
     color: color.inkMuted,
   },
-  tally: {
-    flexDirection: 'row',
-    gap: 16,
-    paddingVertical: 18,
-    borderTopWidth: StyleSheet.hairlineWidth * 2,
-    borderBottomWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: color.hairline,
+
+  sectionTitle: { fontFamily: font.displayBold, fontSize: 19, color: color.ink },
+  barTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  barXp: { fontFamily: font.displayBold, fontSize: 12.5, color: color.brass },
+
+  shelf: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 16, columnGap: 10 },
+  badgeSlot: { width: '30%', alignItems: 'center', gap: 7 },
+  badgeLabel: {
+    fontFamily: font.semibold,
+    fontSize: 11,
+    lineHeight: 14,
+    textAlign: 'center',
+    color: color.inkBody,
   },
-  statValue: {
-    fontFamily: font.bold,
-    fontSize: 24,
-    letterSpacing: -0.6,
-    color: color.inkStrong,
-    fontVariant: ['tabular-nums'],
-  },
-  statValueSmall: { fontSize: 14, letterSpacing: -0.2, paddingTop: 8 },
-  statLabel: {
-    fontFamily: font.bold,
-    fontSize: 9,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    color: color.inkMuted,
-  },
-  progressHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  progressName: { fontFamily: font.semibold, fontSize: 14, color: color.inkStrong },
-  progressCount: {
-    fontFamily: font.bold,
-    fontSize: 11.5,
-    color: color.inkMuted,
-    fontVariant: ['tabular-nums'],
-  },
-  track: { height: 2, backgroundColor: 'rgba(28,24,21,0.11)', overflow: 'hidden' },
-  fill: { height: '100%' },
+
   recent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    paddingVertical: 13,
-    borderTopWidth: StyleSheet.hairlineWidth * 2,
-    borderTopColor: color.hairline,
+    gap: 12,
+    padding: 13,
+    borderRadius: radius.tile,
+    borderWidth: 2,
+    borderColor: color.hairline,
+    ...bevel(color.hairline),
   },
-  recentTitle: { fontFamily: font.semibold, fontSize: 13.5, lineHeight: 18, color: color.inkStrong },
+  pressed: { transform: [{ translateY: 3 }], borderBottomWidth: 2 },
+  recentTitle: { fontFamily: font.display, fontSize: 14.5, color: color.inkStrong },
   recentWhen: {
-    fontFamily: font.bold,
+    fontFamily: font.extra,
     fontSize: 9.5,
-    letterSpacing: 1.3,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: color.inkMuted,
+    color: color.inkFaint,
   },
-  symbol: { textTransform: 'none' },
-  done: { fontFamily: font.bold, fontSize: 9.5, letterSpacing: 1.5, color: color.green },
-  empty: { fontFamily: font.regular, fontSize: 12.5, lineHeight: 20, color: color.inkMuted },
+  empty: { fontFamily: font.regular, fontSize: 13, color: color.inkMuted },
+
   setting: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 15,
-    borderTopWidth: StyleSheet.hairlineWidth * 2,
+    paddingVertical: 14,
+    borderTopWidth: 2,
     borderTopColor: color.hairline,
   },
-  settingLabel: { fontFamily: font.regular, fontSize: 13.5, color: color.inkBody },
-  settingValue: { fontFamily: font.semibold, fontSize: 12.5, color: color.inkMuted },
+  settingLabel: { fontFamily: font.medium, fontSize: 14, color: color.inkBody },
+  settingValue: { fontFamily: font.displayBold, fontSize: 13.5, color: color.inkMuted },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 14 },
   chip: {
     paddingHorizontal: 13,
     paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderRadius: radius.pill,
+    borderWidth: 2,
     borderColor: color.hairline,
-    backgroundColor: 'rgba(28,24,21,0.028)',
   },
-  chipOn: { borderColor: 'rgba(150,102,47,0.5)', backgroundColor: 'rgba(150,102,47,0.07)' },
+  chipOn: { borderColor: color.blueEdge, backgroundColor: color.blueSoft },
   chipLabel: {
-    fontFamily: font.bold,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    fontFamily: font.displayBold,
+    fontSize: 12,
     color: color.inkMuted,
   },
 });

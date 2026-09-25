@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { color, font, radius } from '../../theme';
+import { color, font } from '../../theme';
 import Slider from '../../components/Slider';
 import EyeScene from './EyeScene';
 import RetinalView, { verdictFor } from './RetinalView';
@@ -83,6 +83,54 @@ export default function FreePlay() {
 
   return (
     <View style={styles.wrap}>
+      {/* The readout sits above the bench rather than over it. It used to be an
+          absolute panel in the top right, which is exactly where the eye is
+          drawn — in portrait it covered the eyeball outright, and in landscape
+          it clipped the top of it. In flow and laid out across, it cannot. */}
+      <View style={styles.readout} pointerEvents="none">
+        <View style={styles.pov}>
+          <RetinalView sharpness={focus.sharpness} width={POV_W} height={POV_H} />
+        </View>
+
+        <View style={styles.readoutBody}>
+          <View style={styles.verdictRow}>
+            <Text style={styles.eyebrow}>Retinal image</Text>
+            <Text style={[styles.verdict, { color: verdict.tone }]} numberOfLines={1}>
+              {verdict.label}
+            </Text>
+            <Text style={styles.blur}>{(focus.blurCm * 10).toFixed(2)} mm</Text>
+          </View>
+
+          <View style={styles.track}>
+            <View
+              style={[
+                styles.fill,
+                {
+                  width: `${Math.round(focus.sharpness * 100)}%`,
+                  backgroundColor: verdict.tone,
+                },
+              ]}
+            />
+          </View>
+
+          <View style={styles.statsRow}>
+            <Stat label="Eyeball" value={defect.name} />
+            <Stat
+              label={lens ? 'Range, wearing it' : 'Range, bare'}
+              value={`far ${fmtRange(range.farCm)} · near ${fmtRange(range.nearCm)}`}
+            />
+          </View>
+
+          <Text style={styles.note} numberOfLines={1}>
+            {focus.straining
+              ? 'Lens at full accommodation — nothing left to give'
+              : focus.effort < 0.02
+              ? 'Lens fully relaxed'
+              : `Lens accommodating · ${Math.round(focus.effort * 100)}% of its range`}
+          </Text>
+        </View>
+      </View>
+
       <View
         style={styles.stage}
         onLayout={(e) =>
@@ -101,44 +149,6 @@ export default function FreePlay() {
           />
         ) : null}
 
-        <View style={styles.panel} pointerEvents="none">
-          <Text style={styles.eyebrow}>Retinal image · point of view</Text>
-          <View style={styles.pov}>
-            <RetinalView sharpness={focus.sharpness} width={POV_W} height={POV_H} />
-          </View>
-
-          <View style={styles.verdictRow}>
-            <Text style={[styles.verdict, { color: verdict.tone }]} numberOfLines={1}>
-              {verdict.label}
-            </Text>
-            <Text style={styles.blur}>{(focus.blurCm * 10).toFixed(2)} mm</Text>
-          </View>
-          <View style={styles.track}>
-            <View
-              style={[
-                styles.fill,
-                {
-                  width: `${Math.round(focus.sharpness * 100)}%`,
-                  backgroundColor: verdict.tone,
-                },
-              ]}
-            />
-          </View>
-
-          <View style={styles.rule} />
-          <Stat label="Eyeball" value={defect.name} />
-          <Stat
-            label={lens ? 'Range, wearing it' : 'Range, bare'}
-            value={`far ${fmtRange(range.farCm)} · near ${fmtRange(range.nearCm)}`}
-          />
-          <Text style={styles.note}>
-            {focus.straining
-              ? 'Lens at full accommodation — nothing left to give'
-              : focus.effort < 0.02
-              ? 'Lens fully relaxed'
-              : `Lens accommodating · ${Math.round(focus.effort * 100)}% of its range`}
-          </Text>
-        </View>
       </View>
 
       <View style={styles.controls}>
@@ -216,27 +226,29 @@ function Stat({ label, value }) {
   );
 }
 
-const PANEL_W = 228;
-const POV_W = PANEL_W - 24;
+// The acuity card, laid on its side next to the numbers rather than above
+// them. Its aspect follows RetinalView's own viewBox.
+const POV_W = 112;
 const POV_H = Math.round((POV_W * 120) / 208);
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: '#10151D' },
   stage: { flex: 1, overflow: 'hidden' },
 
-  panel: {
-    position: 'absolute',
-    top: 12,
-    right: 14,
-    width: PANEL_W,
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: radius.chip,
-    backgroundColor: 'rgba(16,21,29,0.78)',
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: 'rgba(255,255,255,0.14)',
+  // Left padding clears the screen's floating back button, which the bench
+  // hides its own title bar for.
+  readout: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingLeft: 56,
+    paddingRight: 14,
+    paddingTop: 8,
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth * 2,
+    borderBottomColor: 'rgba(255,255,255,0.12)',
   },
+  readoutBody: { flex: 1, minWidth: 0, gap: 3 },
   eyebrow: {
     fontFamily: font.bold,
     fontSize: 8.5,
@@ -244,14 +256,12 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: 'rgba(255,253,248,0.5)',
   },
-  pov: { width: POV_W, height: POV_H, borderRadius: 7, overflow: 'hidden', marginTop: 3 },
+  pov: { width: POV_W, height: POV_H, borderRadius: 7, overflow: 'hidden' },
 
   verdictRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: 6,
-    marginTop: 2,
+    gap: 8,
   },
   verdict: { fontFamily: font.bold, fontSize: 13.5, letterSpacing: -0.1, flexShrink: 1 },
   blur: {
@@ -259,6 +269,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: 'rgba(255,253,248,0.55)',
     fontVariant: ['tabular-nums'],
+    marginLeft: 'auto',
   },
   track: {
     height: 3,
@@ -269,12 +280,16 @@ const styles = StyleSheet.create({
   },
   fill: { height: 3, borderRadius: 2 },
 
-  rule: {
-    height: StyleSheet.hairlineWidth * 2,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    marginTop: 4,
+  // Side by side when there is room; the pair drops to two lines on a narrow
+  // portrait phone rather than truncating either one.
+  statsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: 16,
+    rowGap: 2,
+    marginTop: 2,
   },
-  statRow: { gap: 1 },
+  statRow: { gap: 1, flexGrow: 1, flexBasis: 150, minWidth: 0 },
   statLabel: {
     fontFamily: font.bold,
     fontSize: 8,

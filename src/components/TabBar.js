@@ -1,30 +1,34 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, font } from '../theme';
+import { color, font, radius, soften } from '../theme';
 
 const TABS = [
-  { route: 'Subjects', label: 'Learn' },
-  { route: 'Search', label: 'Search' },
-  { route: 'Profile', label: 'You' },
+  { route: 'Subjects', label: 'Learn', tone: color.blue },
+  { route: 'Quests', label: 'Quests', tone: color.purple },
+  { route: 'Search', label: 'Search', tone: color.gold },
+  { route: 'Profile', label: 'You', tone: color.green },
 ];
 
 export default function TabBar({ navigation, active }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+    <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
       {TABS.map((t) => {
         const on = t.route === active;
+        const skin = soften[t.tone];
         return (
           <Pressable
             key={t.route}
-            style={styles.tab}
+            style={[
+              styles.tab,
+              on && { backgroundColor: skin.soft, borderColor: skin.edge },
+            ]}
             onPress={() => {
               if (!on) navigation.navigate(t.route);
             }}
           >
-            <View style={[styles.dot, on && { backgroundColor: color.brass }]} />
-            <Text style={[styles.label, on && { color: color.brass }]}>{t.label}</Text>
+            <Text style={[styles.label, on && { color: skin.ink }]}>{t.label}</Text>
           </Pressable>
         );
       })}
@@ -35,19 +39,26 @@ export default function TabBar({ navigation, active }) {
 const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
-    paddingTop: 12,
-    paddingHorizontal: 34,
-    borderTopWidth: StyleSheet.hairlineWidth * 2,
+    justifyContent: 'space-around',
+    paddingTop: 10,
+    paddingHorizontal: 12,
+    borderTopWidth: 2,
     borderTopColor: color.hairline,
-    backgroundColor: 'rgba(251,247,240,0.96)',
+    backgroundColor: color.screen,
   },
-  tab: { flex: 1, alignItems: 'center', gap: 7, paddingVertical: 4 },
-  dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: 'transparent' },
+  tab: {
+    minWidth: 62,
+    paddingVertical: 11,
+    paddingHorizontal: 10,
+    borderRadius: radius.chip,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   label: {
-    fontFamily: font.bold,
-    fontSize: 9.5,
-    letterSpacing: 1.7,
-    textTransform: 'uppercase',
-    color: color.inkMuted,
+    fontFamily: font.displayBold,
+    fontSize: 13,
+    color: color.inkFaint,
   },
 });

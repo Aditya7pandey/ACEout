@@ -13,6 +13,7 @@ export const KEYS = {
   user: 'aceout.user.v1',
   progress: 'aceout.progress.v2',
   legacyProgress: 'aceout.progress.v1',
+  game: 'aceout.game.v1',
 };
 
 export async function readJSON(key, fallback) {
