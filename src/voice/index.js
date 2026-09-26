@@ -16,8 +16,15 @@ export { answerQuestion } from './ragEngine';
 export { checkOnline, speechToText, textToSpeech } from './deepgramService';
 export { retrieveChunks, LAB_KNOWLEDGE } from './labKnowledge';
 
-/** The two labs that currently have voice AI support. */
-export const VOICE_ENABLED_LABS = ['incline-work-energy', 'eye-defects'];
+/** The six labs that currently have voice AI support. */
+export const VOICE_ENABLED_LABS = [
+  'incline-work-energy',
+  'eye-defects',
+  'acid-base-indicators',
+  'ph-determination',
+  'gravity-launch',
+  'plant-physiology',
+];
 
 /** Check whether a given lab id has voice AI support. */
 export function isVoiceEnabled(labId) {

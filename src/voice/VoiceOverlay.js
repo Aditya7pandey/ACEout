@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, StyleSheet, Pressable, Animated, ScrollView, Platform } from 'react-native';
-import { Audio } from 'expo-av';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  RecordingPresets,
+  createAudioPlayer,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  useAudioRecorder,
+} from 'expo-audio';
 import { Text } from '../i18n';
 import { color, font, radius, bevel, shadow } from '../theme';
 import { speechToText, textToSpeech } from './deepgramService';
@@ -23,8 +30,15 @@ export default function VoiceOverlay({ labId, onClose }) {
 
   const [pulse] = useState(new Animated.Value(1));
 
-  const recordingRef = useRef(null);
-  const soundRef = useRef(null);
+  // The pill takes over the corner the "Ask AI" button sits in, so it clears
+  // the system navigation bar the same way — see the note in LabScreen.
+  const insets = useSafeAreaInsets();
+
+  // expo-audio hands back one long-lived recorder rather than expo-av's
+  // object-per-take, so "are we mid-take?" is ours to track.
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recordingRef = useRef(false);
+  const playerRef = useRef(null);
   const unmounted = useRef(false);
 
   // Animation for recording
@@ -44,34 +58,47 @@ export default function VoiceOverlay({ labId, onClose }) {
     return () => anim?.stop();
   }, [voiceState, pulse]);
 
-  const cleanupAudio = useCallback(async () => {
-    if (recordingRef.current) {
+  /**
+   * Drop the current player. Tearing a player down from inside its own status
+   * callback re-enters native teardown, so the release always lands on the
+   * next tick — the ref is cleared immediately either way.
+   */
+  const releasePlayer = useCallback(() => {
+    const player = playerRef.current;
+    playerRef.current = null;
+    if (!player) return;
+    setTimeout(() => {
       try {
-        await recordingRef.current.stopAndUnloadAsync();
+        player.remove();
       } catch (e) {}
-      recordingRef.current = null;
-    }
-    if (soundRef.current) {
-      try {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
-      } catch (e) {}
-      soundRef.current = null;
-    }
+    }, 0);
   }, []);
 
+  const cleanupAudio = useCallback(async () => {
+    if (recordingRef.current || recorder.isRecording) {
+      recordingRef.current = false;
+      try {
+        await recorder.stop();
+      } catch (e) {}
+    }
+    releasePlayer();
+  }, [recorder, releasePlayer]);
+
   /**
-   * `allowsRecordingIOS` has to be toggled, not set once: while it is true iOS
+   * `allowsRecording` has to be toggled, not set once: while it is true iOS
    * routes playback to the earpiece, so leaving it on makes the answer come out
    * of the receiver at a whisper. Android ignores it.
    */
   const setAudioMode = useCallback(async (recording) => {
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: recording,
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: false,
-      shouldDuckAndroid: true,
-      playThroughEarpieceAndroid: false,
+    await setAudioModeAsync({
+      allowsRecording: recording,
+      playsInSilentMode: true,
+      shouldPlayInBackground: false,
+      // expo-audio folded expo-av's `shouldDuckAndroid` into one cross-platform
+      // interruption mode; ducking is what a lab assistant talking over other
+      // audio should do.
+      interruptionMode: 'duckOthers',
+      shouldRouteThroughEarpiece: false,
     });
   }, []);
 
@@ -82,16 +109,18 @@ export default function VoiceOverlay({ labId, onClose }) {
       await setAudioMode(true);
       setVoiceState('LISTENING');
 
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      recordingRef.current = recording;
+      // A fresh prepare is required before every take — a recorder that has
+      // already stopped will not record again without it.
+      await recorder.prepareToRecordAsync();
+      if (unmounted.current) return;
+      recorder.record();
+      recordingRef.current = true;
     } catch (e) {
       console.error('Failed to start recording', e);
       setNotice('Could not reach the microphone.');
       setVoiceState('IDLE');
     }
-  }, [cleanupAudio, setAudioMode]);
+  }, [cleanupAudio, recorder, setAudioMode]);
 
   /**
    * Speak `text`, then hand back to the mic. A speech failure is reported and
@@ -104,31 +133,37 @@ export default function VoiceOverlay({ labId, onClose }) {
       if (unmounted.current) return;
 
       await setAudioMode(false);
-      const { sound } = await Audio.Sound.createAsync({ uri });
-      soundRef.current = sound;
+      releasePlayer();
 
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.didJustFinish && !unmounted.current) {
-          const finished = soundRef.current;
-          soundRef.current = null;
-          finished?.unloadAsync().catch(() => {});
-          // After speaking, immediately start listening again
-          startListening();
-        }
+      const player = createAudioPlayer({ uri });
+      playerRef.current = player;
+
+      // `didJustFinish` arrives on a repeating status stream rather than
+      // expo-av's one-shot callback, so the handoff back to the mic is latched
+      // to fire once.
+      let handedOff = false;
+      let sub = null;
+      sub = player.addListener('playbackStatusUpdate', (status) => {
+        if (!status?.didJustFinish || handedOff) return;
+        handedOff = true;
+        sub?.remove();
+        if (playerRef.current === player) releasePlayer();
+        // After speaking, immediately start listening again
+        if (!unmounted.current) startListening();
       });
 
-      await sound.playAsync();
+      player.play();
     } catch (e) {
       console.error('TTS Error:', e);
       setNotice('Speech is unavailable — the answer is written above.');
       startListening(); // fallback to listening if speech fails
     }
-  }, [setAudioMode, startListening]);
+  }, [releasePlayer, setAudioMode, startListening]);
 
   const setupAudioAndGreet = useCallback(async () => {
     try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') {
+      const { granted } = await requestRecordingPermissionsAsync();
+      if (!granted) {
         setNotice('Microphone permission is required for the voice assistant.');
         setVoiceState('IDLE');
         return;
@@ -136,9 +171,15 @@ export default function VoiceOverlay({ labId, onClose }) {
 
       await setAudioMode(false);
 
-      const greeting = labId === 'incline-work-energy'
-        ? "Hi, I'm your lab assistant! Ask me anything about friction or this incline."
-        : "Hi, I'm your lab assistant! I can help you with the human eye and optics.";
+      const GREETINGS = {
+        'incline-work-energy': "Hi, I'm your lab assistant! Ask me anything about friction or this incline.",
+        'eye-defects': "Hi, I'm your lab assistant! I can help you with the human eye and optics.",
+        'acid-base-indicators': "Hi, I'm your lab assistant! Ask me anything about pH indicators and their color transitions.",
+        'ph-determination': "Hi, I'm your lab assistant! I can help you understand pH and concentration.",
+        'gravity-launch': "Hi, I'm your lab assistant! Ask me anything about projectile motion and finding gravity.",
+        'plant-physiology': "Hi, I'm your lab assistant! I can help you with plasmolysis, stomata, or transpiration."
+      };
+      const greeting = GREETINGS[labId] || "Hi, I'm your lab assistant! Ask me anything about this lab.";
 
       setVoiceState('GREETING');
       setTurn({ answer: greeting });
@@ -167,9 +208,12 @@ export default function VoiceOverlay({ labId, onClose }) {
     setVoiceState('THINKING');
     setNotice(null);
     try {
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
-      recordingRef.current = null;
+      recordingRef.current = false;
+      await recorder.stop();
+      // The URI is a property on the recorder now, and it is only populated
+      // once the take has been finalised.
+      const uri = recorder.uri;
+      if (!uri) throw new Error('The recording produced no audio file.');
 
       // 1. STT
       const { text: sttText } = await speechToText(uri);
@@ -215,7 +259,7 @@ export default function VoiceOverlay({ labId, onClose }) {
   const busy = voiceState === 'THINKING' || voiceState === 'SPEAKING' || voiceState === 'GREETING';
 
   return (
-    <View style={styles.overlay} pointerEvents="box-none">
+    <View style={[styles.overlay, { bottom: insets.bottom + GUTTER }]} pointerEvents="box-none">
       {(turn || notice) && (
         <View style={styles.card}>
           <View style={styles.cardHead}>
@@ -257,12 +301,15 @@ export default function VoiceOverlay({ labId, onClose }) {
   );
 }
 
+/** Matches the "Ask AI" button this overlay replaces. */
+const GUTTER = 24;
+
 const styles = StyleSheet.create({
   overlay: {
     position: 'absolute',
-    bottom: 24,
-    right: 24,
-    left: 24,
+    // `bottom` is applied at the call site — it depends on the safe-area inset.
+    right: GUTTER,
+    left: GUTTER,
     alignItems: 'flex-end',
     gap: 10,
     zIndex: 1000,

@@ -44,11 +44,15 @@ export default function VoiceAssistantScreen({ route, navigation }) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Welcome message — tailored to the lab the student came from
-    const welcomeText =
-      labId === 'incline-work-energy'
-        ? "Hi! I'm your lab assistant for the Inclined Plane experiment. I know all about friction, the work-energy theorem, and how to run this bench. Ask me anything — tap the mic or type below!"
-        : "Hi! I'm your lab assistant for the Human Eye and Spectacles experiment. I can help with accommodation, myopia, hypermetropia, and lens prescriptions. Ask me anything — tap the mic or type below!";
+    const GREETINGS = {
+      'incline-work-energy': "Hi! I'm your lab assistant for the Inclined Plane experiment. I know all about friction, the work-energy theorem, and how to run this bench. Ask me anything — tap the mic or type below!",
+      'eye-defects': "Hi! I'm your lab assistant for the Human Eye and Spectacles experiment. I can help with accommodation, myopia, hypermetropia, and lens prescriptions. Ask me anything — tap the mic or type below!",
+      'acid-base-indicators': "Hi! I'm your lab assistant for the Acid-Base Indicators experiment. I know all about pH transitions, Phenolphthalein, and Methyl Orange. Ask me anything — tap the mic or type below!",
+      'ph-determination': "Hi! I'm your lab assistant for the pH Determination experiment. I can help with universal indicator, digital pH meters, and H+ concentration. Ask me anything — tap the mic or type below!",
+      'gravity-launch': "Hi! I'm your lab assistant for the Gravity Launch experiment. I can help with projectile motion, finding launch speeds, and calculating gravity. Ask me anything — tap the mic or type below!",
+      'plant-physiology': "Hi! I'm your lab assistant for the Plant Physiology experiments. I can help with plasmolysis, stomatal distribution, and transpiration. Ask me anything — tap the mic or type below!"
+    };
+    const welcomeText = GREETINGS[labId] || "Hi! I'm your lab assistant. Ask me anything — tap the mic or type below!";
 
     setMessages([{ role: 'assistant', text: welcomeText, timestamp: new Date() }]);
 
@@ -83,16 +87,17 @@ export default function VoiceAssistantScreen({ route, navigation }) {
     }
   };
 
-  // ---- recording stubs — wire up expo-av here ----
+  // ---- recording stubs — wire up expo-audio here ----
+  // VoiceOverlay.js is the working implementation of this pipeline; copy from
+  // there rather than from expo-av examples, which no longer run on SDK 57.
 
   const handleStartRecording = () => {
     if (!isOnline) return;
     setIsRecording(true);
-    // TODO: start expo-av Audio.Recording
-    //   const { recording } = await Audio.Recording.createAsync(
-    //     Audio.RecordingOptionsPresets.HIGH_QUALITY
-    //   );
-    //   recordingRef.current = recording;
+    // TODO: start the expo-audio recorder
+    //   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+    //   await recorder.prepareToRecordAsync();
+    //   recorder.record();
   };
 
   const handleStopRecording = async () => {
@@ -101,9 +106,9 @@ export default function VoiceAssistantScreen({ route, navigation }) {
     setIsProcessing(true);
 
     try {
-      // TODO: stop the expo-av recording and get its URI
-      //   await recordingRef.current.stopAndUnloadAsync();
-      //   const uri = recordingRef.current.getURI();
+      // TODO: stop the expo-audio recording and get its URI
+      //   await recorder.stop();
+      //   const uri = recorder.uri;
       //   const { text } = await speechToText(uri);
       //   if (text) await processUserMessage(text);
 
@@ -143,12 +148,10 @@ export default function VoiceAssistantScreen({ route, navigation }) {
         { role: 'assistant', text: answer, sources, timestamp: new Date() },
       ]);
 
-      // TODO: play the answer aloud via expo-av Sound
-      //   const base64 = await textToSpeech(answer);
-      //   const { sound } = await Audio.Sound.createAsync(
-      //     { uri: `data:audio/wav;base64,${base64}` }
-      //   );
-      //   await sound.playAsync();
+      // TODO: play the answer aloud via an expo-audio player
+      //   const uri = await textToSpeech(answer);
+      //   const player = createAudioPlayer({ uri });
+      //   player.play();  // player.remove() once it has finished
     } catch (err) {
       console.error('RAG error:', err);
       setMessages((prev) => [

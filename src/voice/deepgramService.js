@@ -49,9 +49,9 @@ function getApiKey() {
 
 /**
  * Deepgram sniffs the container, but it rejects a Content-Type it does not
- * recognise — and `audio/m4a` is not one of them. expo-av's HIGH_QUALITY preset
- * writes an MPEG-4 container on both platforms, so the extension is the honest
- * signal here.
+ * recognise — and `audio/m4a` is not one of them. expo-audio's HIGH_QUALITY
+ * preset writes an MPEG-4 container on both platforms, so the extension is the
+ * honest signal here.
  */
 function audioTypeForUri(uri) {
   const ext = (uri.split('?')[0].split('.').pop() || '').toLowerCase();
@@ -141,7 +141,7 @@ export async function checkOnline() {
 
 /**
  * Convert speech audio to text.
- * @param {string} audioUri - URI to the audio file (from expo-av recording)
+ * @param {string} audioUri - URI to the audio file (from an expo-audio recording)
  * @param {object} options - { language: 'en', model: 'nova-2' }
  * @returns {Promise<{text: string, confidence: number}>}
  */
@@ -218,7 +218,7 @@ export async function speechToText(audioUri, options = {}) {
 
 /**
  * Convert text to speech. Returns a local file URI (native) or a blob URI
- * (web) that expo-av can play.
+ * (web) that an expo-audio player can play.
  *
  * Note for the native path: `FileSystem.downloadAsync` cannot fetch this. Its
  * `DownloadOptions` carry only `headers`, `md5`, `cache` and `sessionType` —
@@ -263,7 +263,7 @@ export async function textToSpeech(text, options = {}) {
       return URL.createObjectURL(blob);
     }
 
-    // expo-av will not play a blob on native, so the mp3 has to land in the cache.
+    // A blob will not play on native, so the mp3 has to land in the cache.
     const base64 = await blobToBase64(blob);
     const fileUri = `${FileSystem.cacheDirectory}tts_${Date.now()}.mp3`;
     await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: 'base64' });

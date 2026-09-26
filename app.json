@@ -33,6 +33,12 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 160
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow ACEout to access your microphone for the voice assistant."
+        }
       ]
     ],
     "extra": {

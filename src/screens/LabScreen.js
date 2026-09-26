@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useCallback, useState, useEffect } from 'react';
 import { View, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, useLanguage, hasKey } from '../i18n';
 import { color, font, radius, bevel, shadow } from '../theme';
 import { Page, BackButton, Rule } from '../components/ui';
@@ -39,6 +40,13 @@ export default function LabScreen({ navigation, route }) {
   const { completeLab } = useAppState();
   const { t } = useLanguage();
   const [activeVoice, setActiveVoice] = useState(false);
+
+  // `Page` pads itself by the safe-area inset, but an absolutely positioned
+  // child is laid out against the padding box — padding does not push it in.
+  // Under Android edge-to-edge (the default since SDK 54) that puts a plain
+  // `bottom: 24` underneath the system navigation bar, so the offset has to
+  // carry the inset itself.
+  const insets = useSafeAreaInsets();
 
   // The catalogue is English. A bench that has been translated names itself in
   // the string catalogue, and the bar prefers that when it is there.
@@ -154,6 +162,7 @@ export default function LabScreen({ navigation, route }) {
             onPress={() => setActiveVoice(true)}
             style={({ pressed }) => [
               styles.fabAi,
+              { bottom: insets.bottom + GUTTER },
               pressed && { transform: [{ translateY: 3 }], borderBottomWidth: 1 },
             ]}
           >
@@ -164,6 +173,9 @@ export default function LabScreen({ navigation, route }) {
     </Page>
   );
 }
+
+/** The gap a floating control keeps from the screen edge, and from the inset. */
+const GUTTER = 24;
 
 const styles = StyleSheet.create({
   bar: {
@@ -221,8 +233,8 @@ const styles = StyleSheet.create({
   // hard bottom edge every other pressable block in the app carries.
   fabAi: {
     position: 'absolute',
-    bottom: 24,
-    right: 24,
+    // `bottom` is applied at the call site — it depends on the safe-area inset.
+    right: GUTTER,
     backgroundColor: color.purple,
     paddingHorizontal: 20,
     paddingVertical: 13,
